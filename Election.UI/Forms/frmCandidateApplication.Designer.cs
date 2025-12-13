@@ -234,7 +234,7 @@
             pnlMain.Name = "pnlMain";
             pnlMain.Size = new Size(1137, 670);
             pnlMain.TabIndex = 1;
-       
+            pnlMain.Paint += pnlMain_Paint;
             // 
             // btnSubmit
             // 
@@ -335,6 +335,7 @@
             Margin = new Padding(4);
             Name = "frmCandidateApplication";
             Text = "frmCandidateApplication";
+            Load += frmCandidateApplication_Load;
             pnlHeader.ResumeLayout(false);
             pnlHeader.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();

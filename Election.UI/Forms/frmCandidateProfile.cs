@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Election.UI.Forms
@@ -37,51 +38,58 @@ namespace Election.UI.Forms
                 if (response.IsSuccessStatusCode)
                 {
                     var jsonString = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<JsonElement>(jsonString);
+
+                    // ✅ FIX ADDED HERE: Case-insensitive JSON parsing
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true  // THIS LINE FIXES THE ISSUE
+                    };
+
+                    var result = JsonSerializer.Deserialize<JsonElement>(jsonString, options);
 
                     if (result.TryGetProperty("success", out var success) && success.GetBoolean())
                     {
                         // Store candidate ID
-                        if (result.TryGetProperty("Id", out var id))
+                        if (result.TryGetProperty("id", out var id))
                         {
                             _candidateId = id.GetInt32();
                         }
 
                         // Fill form fields
-                        if (result.TryGetProperty("FullName", out var fullName))
+                        if (result.TryGetProperty("fullName", out var fullName))
                             txtFullName.Text = fullName.ToString();
 
-                        if (result.TryGetProperty("Age", out var age))
+                        if (result.TryGetProperty("age", out var age))
                             txtAge.Text = age.ToString();
 
-                        if (result.TryGetProperty("Region", out var region))
+                        if (result.TryGetProperty("region", out var region))
                             txtRegion.Text = region.ToString();
 
-                        if (result.TryGetProperty("PartyAffiliation", out var party))
+                        if (result.TryGetProperty("partyAffiliation", out var party))
                             txtParty.Text = party.ToString();
 
-                        if (result.TryGetProperty("Email", out var email))
+                        if (result.TryGetProperty("email", out var email))
                             txtEmail.Text = email.ToString();
 
-                        if (result.TryGetProperty("Phone", out var phone))
+                        if (result.TryGetProperty("phone", out var phone))
                             txtPhone.Text = phone.ToString();
 
-                        if (result.TryGetProperty("Status", out var status))
+                        if (result.TryGetProperty("status", out var status))
                             lblStatusValue.Text = status.ToString();
 
-                        if (result.TryGetProperty("ApplicationDate", out var date))
+                        if (result.TryGetProperty("applicationDate", out var date))
                             lblDateValue.Text = date.ToString();
                     }
                     else
                     {
-                        MessageBox.Show("No candidate application found.", "Info",
+                        MessageBox.Show("No candidate application found.", "Information",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                         this.Close();
                     }
                 }
                 else
                 {
-                    MessageBox.Show("No candidate application found.", "Info",
+                    MessageBox.Show("No candidate application found.", "Information",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     this.Close();
                 }
@@ -110,6 +118,24 @@ namespace Election.UI.Forms
                     return;
                 }
 
+                if (string.IsNullOrWhiteSpace(txtRegion.Text))
+                {
+                    MessageBox.Show("Region is required.", "Validation Error");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(txtParty.Text))
+                {
+                    MessageBox.Show("Party/Affiliation is required.", "Validation Error");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(txtPhone.Text))
+                {
+                    MessageBox.Show("Phone is required.", "Validation Error");
+                    return;
+                }
+
                 // Prepare update data
                 var updateData = new
                 {
@@ -127,7 +153,10 @@ namespace Election.UI.Forms
                 if (response.IsSuccessStatusCode)
                 {
                     var jsonString = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<JsonElement>(jsonString);
+
+                    // ✅ ALSO FIXED HERE: Case-insensitive for update response
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var result = JsonSerializer.Deserialize<JsonElement>(jsonString, options);
 
                     bool success = result.TryGetProperty("success", out var successProp) && successProp.GetBoolean();
 

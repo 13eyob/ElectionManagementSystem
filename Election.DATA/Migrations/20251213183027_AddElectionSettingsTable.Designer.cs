@@ -4,6 +4,7 @@ using Election.DATA;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Election.DATA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251213183027_AddElectionSettingsTable")]
+    partial class AddElectionSettingsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -123,7 +126,7 @@ namespace Election.DATA.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedDate = new DateTime(2025, 12, 13, 20, 18, 39, 554, DateTimeKind.Utc).AddTicks(9412),
+                            CreatedDate = new DateTime(2025, 12, 13, 18, 30, 26, 220, DateTimeKind.Utc).AddTicks(7571),
                             ElectionTitle = "General Election 2024",
                             IsElectionActive = false,
                             RegistrationOpen = true,
@@ -178,44 +181,6 @@ namespace Election.DATA.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("Election.DATA.Models.Vote", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CandidateId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("VoteDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CandidateId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Votes");
-                });
-
-            modelBuilder.Entity("Election.DATA.Models.Vote", b =>
-                {
-                    b.HasOne("Election.DATA.Models.Candidate", "Candidate")
-                        .WithMany()
-                        .HasForeignKey("CandidateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Candidate");
                 });
 #pragma warning restore 612, 618
         }

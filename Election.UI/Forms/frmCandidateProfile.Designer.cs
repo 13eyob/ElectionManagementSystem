@@ -37,7 +37,6 @@
 
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmCandidateProfile));
             lblTitle = new Label();
             panelMain = new Panel();
             lblDateValue = new Label();
@@ -71,7 +70,7 @@
             lblTitle.ForeColor = Color.FromArgb(15, 22, 40);
             lblTitle.Location = new Point(20, 20);
             lblTitle.Name = "lblTitle";
-            lblTitle.Size = new Size(218, 30);
+            lblTitle.Size = new Size(232, 30);
             lblTitle.TabIndex = 0;
             lblTitle.Text = "My Candidate Profile";
             // 
@@ -99,6 +98,7 @@
             panelMain.Name = "panelMain";
             panelMain.Size = new Size(500, 350);
             panelMain.TabIndex = 1;
+          
             // 
             // lblDateValue
             // 
@@ -106,7 +106,7 @@
             lblDateValue.Font = new Font("Segoe UI", 9.5F);
             lblDateValue.Location = new Point(150, 290);
             lblDateValue.Name = "lblDateValue";
-            lblDateValue.Size = new Size(89, 17);
+            lblDateValue.Size = new Size(85, 17);
             lblDateValue.TabIndex = 15;
             lblDateValue.Text = "Not available";
             // 
@@ -116,7 +116,7 @@
             lblAppliedDate.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             lblAppliedDate.Location = new Point(30, 290);
             lblAppliedDate.Name = "lblAppliedDate";
-            lblAppliedDate.Size = new Size(90, 17);
+            lblAppliedDate.Size = new Size(93, 17);
             lblAppliedDate.TabIndex = 14;
             lblAppliedDate.Text = "Applied Date:";
             // 
@@ -127,7 +127,7 @@
             lblStatusValue.ForeColor = Color.FromArgb(0, 123, 255);
             lblStatusValue.Location = new Point(150, 260);
             lblStatusValue.Name = "lblStatusValue";
-            lblStatusValue.Size = new Size(55, 17);
+            lblStatusValue.Size = new Size(59, 17);
             lblStatusValue.TabIndex = 13;
             lblStatusValue.Text = "Pending";
             // 
@@ -155,7 +155,7 @@
             lblPhone.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblPhone.Location = new Point(30, 213);
             lblPhone.Name = "lblPhone";
-            lblPhone.Size = new Size(51, 19);
+            lblPhone.Size = new Size(55, 19);
             lblPhone.TabIndex = 10;
             lblPhone.Text = "Phone:";
             // 
@@ -175,7 +175,7 @@
             lblEmail.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblEmail.Location = new Point(30, 178);
             lblEmail.Name = "lblEmail";
-            lblEmail.Size = new Size(48, 19);
+            lblEmail.Size = new Size(49, 19);
             lblEmail.TabIndex = 8;
             lblEmail.Text = "Email:";
             // 
@@ -193,7 +193,7 @@
             lblParty.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblParty.Location = new Point(30, 143);
             lblParty.Name = "lblParty";
-            lblParty.Size = new Size(124, 19);
+            lblParty.Size = new Size(121, 19);
             lblParty.TabIndex = 6;
             lblParty.Text = "Party/Affiliation:";
             // 
@@ -211,7 +211,7 @@
             lblRegion.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblRegion.Location = new Point(30, 108);
             lblRegion.Name = "lblRegion";
-            lblRegion.Size = new Size(61, 19);
+            lblRegion.Size = new Size(60, 19);
             lblRegion.TabIndex = 4;
             lblRegion.Text = "Region:";
             // 
@@ -229,7 +229,7 @@
             lblAge.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblAge.Location = new Point(30, 73);
             lblAge.Name = "lblAge";
-            lblAge.Size = new Size(38, 19);
+            lblAge.Size = new Size(40, 19);
             lblAge.TabIndex = 2;
             lblAge.Text = "Age:";
             // 
@@ -247,7 +247,7 @@
             lblFullName.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblFullName.Location = new Point(30, 38);
             lblFullName.Name = "lblFullName";
-            lblFullName.Size = new Size(78, 19);
+            lblFullName.Size = new Size(80, 19);
             lblFullName.TabIndex = 0;
             lblFullName.Text = "Full Name:";
             // 
@@ -314,7 +314,6 @@
             Controls.Add(panelMain);
             Controls.Add(lblTitle);
             FormBorderStyle = FormBorderStyle.FixedDialog;
-            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "frmCandidateProfile";

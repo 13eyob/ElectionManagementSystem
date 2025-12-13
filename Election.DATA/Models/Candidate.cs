@@ -39,5 +39,8 @@ namespace Election.DATA.Models
 
         public DateTime ApplicationDate { get; set; } = DateTime.Now;
         public string Status { get; set; } = "Pending";
+
+        // 🔥 NEW: Added for admin approval system
+        public bool IsApproved { get; set; } = false;
     }
 }

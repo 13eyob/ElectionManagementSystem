@@ -1,5 +1,4 @@
-﻿
-namespace Election.UI.Forms
+﻿namespace Election.UI.Forms
 {
     partial class frmLogin
     {
@@ -30,17 +29,23 @@ namespace Election.UI.Forms
         private void InitializeComponent()
         {
             pnllogin = new Panel();
+            pictureBox2 = new PictureBox();
+            pictureBox1 = new PictureBox();
             linkRegister = new LinkLabel();
             button1 = new Button();
             txtPassword = new TextBox();
             txtUsername = new TextBox();
             label1 = new Label();
             pnllogin.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
             // pnllogin
             // 
             pnllogin.BackColor = Color.FromArgb(15, 22, 40);
+            pnllogin.Controls.Add(pictureBox2);
+            pnllogin.Controls.Add(pictureBox1);
             pnllogin.Controls.Add(linkRegister);
             pnllogin.Controls.Add(button1);
             pnllogin.Controls.Add(txtPassword);
@@ -50,6 +55,28 @@ namespace Election.UI.Forms
             pnllogin.Name = "pnllogin";
             pnllogin.Size = new Size(611, 380);
             pnllogin.TabIndex = 0;
+            // 
+            // pictureBox2
+            // 
+            pictureBox2.BackColor = Color.FromArgb(224, 224, 224);
+            pictureBox2.BackgroundImage = Properties.Resources._lock;
+            pictureBox2.BackgroundImageLayout = ImageLayout.Stretch;
+            pictureBox2.Location = new Point(36, 156);
+            pictureBox2.Name = "pictureBox2";
+            pictureBox2.Size = new Size(58, 36);
+            pictureBox2.TabIndex = 6;
+            pictureBox2.TabStop = false;
+            // 
+            // pictureBox1
+            // 
+            pictureBox1.BackColor = Color.FromArgb(224, 224, 224);
+            pictureBox1.BackgroundImage = Properties.Resources.user;
+            pictureBox1.BackgroundImageLayout = ImageLayout.Stretch;
+            pictureBox1.Location = new Point(36, 114);
+            pictureBox1.Name = "pictureBox1";
+            pictureBox1.Size = new Size(58, 36);
+            pictureBox1.TabIndex = 5;
+            pictureBox1.TabStop = false;
             // 
             // linkRegister
             // 
@@ -62,7 +89,7 @@ namespace Election.UI.Forms
             linkRegister.TabIndex = 4;
             linkRegister.TabStop = true;
             linkRegister.Text = "Need an account? Register here";
-            linkRegister.LinkClicked += linkRegister_LinkClicked;
+            // NOTE: LinkClicked event will be connected in code-behind
             // 
             // button1
             // 
@@ -75,25 +102,31 @@ namespace Election.UI.Forms
             button1.TabIndex = 3;
             button1.Text = "Login";
             button1.UseVisualStyleBackColor = false;
-            button1.Click += button1_Click;
+            // NOTE: Click event will be connected in code-behind
             // 
             // txtPassword
             // 
+            txtPassword.BackColor = Color.White;
+            txtPassword.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtPassword.ForeColor = Color.Gray;
             txtPassword.Location = new Point(124, 156);
             txtPassword.Multiline = true;
             txtPassword.Name = "txtPassword";
-            txtPassword.PlaceholderText = "Password";
             txtPassword.Size = new Size(333, 36);
             txtPassword.TabIndex = 2;
+            // NOTE: Text will be set in code-behind Load event
             // 
             // txtUsername
             // 
+            txtUsername.BackColor = Color.White;
+            txtUsername.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtUsername.ForeColor = Color.Gray;
             txtUsername.Location = new Point(124, 114);
             txtUsername.Multiline = true;
             txtUsername.Name = "txtUsername";
-            txtUsername.PlaceholderText = "Username";
             txtUsername.Size = new Size(333, 36);
             txtUsername.TabIndex = 1;
+            // NOTE: Text will be set in code-behind Load event
             // 
             // label1
             // 
@@ -115,16 +148,13 @@ namespace Election.UI.Forms
             ClientSize = new Size(800, 450);
             Controls.Add(pnllogin);
             Name = "frmLogin";
-            Text = "frmLogin";
-            Load += frmLogin_Load;
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Login - Election Management System";
             pnllogin.ResumeLayout(false);
             pnllogin.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
-        }
-
-        private void pnllogin_Paint(object sender, PaintEventArgs e)
-        {
-            throw new NotImplementedException();
         }
 
         #endregion
@@ -135,5 +165,7 @@ namespace Election.UI.Forms
         private Label label1;
         private LinkLabel linkRegister;
         private Button button1;
+        private PictureBox pictureBox1;
+        private PictureBox pictureBox2;
     }
 }

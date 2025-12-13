@@ -1,5 +1,4 @@
-﻿
-namespace Election.UI.Forms
+﻿namespace Election.UI.Forms
 {
     partial class frmRegister
     {
@@ -30,6 +29,7 @@ namespace Election.UI.Forms
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            cmbRegion = new ComboBox();
             numAge = new NumericUpDown();
             btnCancel = new Button();
             btnSubmit = new Button();
@@ -39,7 +39,6 @@ namespace Election.UI.Forms
             txtPassword = new TextBox();
             txtUsername = new TextBox();
             txtEmail = new TextBox();
-            textBox3 = new TextBox();
             txtFullName = new TextBox();
             lblPassword = new Label();
             lblUsername = new Label();
@@ -55,6 +54,7 @@ namespace Election.UI.Forms
             // panel1
             // 
             panel1.BackColor = Color.FromArgb(15, 22, 40);
+            panel1.Controls.Add(cmbRegion);
             panel1.Controls.Add(numAge);
             panel1.Controls.Add(btnCancel);
             panel1.Controls.Add(btnSubmit);
@@ -64,7 +64,6 @@ namespace Election.UI.Forms
             panel1.Controls.Add(txtPassword);
             panel1.Controls.Add(txtUsername);
             panel1.Controls.Add(txtEmail);
-            panel1.Controls.Add(textBox3);
             panel1.Controls.Add(txtFullName);
             panel1.Controls.Add(lblPassword);
             panel1.Controls.Add(lblUsername);
@@ -77,9 +76,22 @@ namespace Election.UI.Forms
             panel1.Name = "panel1";
             panel1.Size = new Size(748, 703);
             panel1.TabIndex = 0;
+            panel1.Paint += panel1_Paint_1;
+            // 
+            // cmbRegion
+            // 
+            cmbRegion.BackColor = SystemColors.InactiveCaption;
+            cmbRegion.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbRegion.FormattingEnabled = true;
+            cmbRegion.Location = new Point(200, 262);
+            cmbRegion.Name = "cmbRegion";
+            cmbRegion.Size = new Size(378, 23);
+            cmbRegion.Sorted = true;
+            cmbRegion.TabIndex = 19;
             // 
             // numAge
             // 
+            numAge.BackColor = SystemColors.InactiveCaption;
             numAge.Location = new Point(200, 211);
             numAge.Minimum = new decimal(new int[] { 18, 0, 0, 0 });
             numAge.Name = "numAge";
@@ -125,6 +137,7 @@ namespace Election.UI.Forms
             rbCandidate.TabStop = true;
             rbCandidate.Text = "Candidate";
             rbCandidate.UseVisualStyleBackColor = true;
+            rbCandidate.CheckedChanged += rbCandidate_CheckedChanged;
             // 
             // rbVoter
             // 
@@ -138,6 +151,7 @@ namespace Election.UI.Forms
             rbVoter.TabStop = true;
             rbVoter.Text = "Voter";
             rbVoter.UseVisualStyleBackColor = true;
+            rbVoter.CheckedChanged += rbVoter_CheckedChanged;
             // 
             // lblRole
             // 
@@ -176,15 +190,6 @@ namespace Election.UI.Forms
             txtEmail.Name = "txtEmail";
             txtEmail.Size = new Size(378, 34);
             txtEmail.TabIndex = 10;
-            // 
-            // textBox3
-            // 
-            textBox3.BackColor = SystemColors.InactiveCaption;
-            textBox3.Location = new Point(200, 251);
-            textBox3.Multiline = true;
-            textBox3.Name = "textBox3";
-            textBox3.Size = new Size(378, 34);
-            textBox3.TabIndex = 9;
             // 
             // txtFullName
             // 
@@ -288,11 +293,6 @@ namespace Election.UI.Forms
             ResumeLayout(false);
         }
 
-        private void panel1_Paint(object sender, PaintEventArgs e)
-        {
-            throw new NotImplementedException();
-        }
-
         #endregion
 
         private Panel panel1;
@@ -306,7 +306,6 @@ namespace Election.UI.Forms
         private TextBox txtPassword;
         private TextBox txtUsername;
         private TextBox txtEmail;
-        private TextBox textBox3;
         private TextBox txtFullName;
         private RadioButton rbVoter;
         private Label lblRole;
@@ -314,5 +313,6 @@ namespace Election.UI.Forms
         private RadioButton rbCandidate;
         private Button btnCancel;
         private NumericUpDown numAge;
+        private ComboBox cmbRegion;
     }
 }

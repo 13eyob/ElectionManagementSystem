@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Election.UI.Forms
 {
-    public partial class frmVoterDashboard : Form
+    internal class frmVoterDashboard
     {
-        public frmVoterDashboard()
-        {
-            InitializeComponent();
-            Text = "Voter Dashboard";
-        }
     }
 }

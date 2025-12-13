@@ -35,36 +35,42 @@
             lblSystemTitle = new Label();
             picLogo = new PictureBox();
             panel1 = new Panel();
-            labeladmin = new Label();
-            panelhome = new Panel();
-            pictureBox1 = new PictureBox();
-            label2 = new Label();
-            panelvoters = new Panel();
-            pictureBox2 = new PictureBox();
-            label3 = new Label();
-            panelcandidate = new Panel();
-            pictureBox3 = new PictureBox();
-            label4 = new Label();
-            button1 = new Button();
-            panelresult = new Panel();
-            pictureBox4 = new PictureBox();
-            label5 = new Label();
-            pictureBox5 = new PictureBox();
             panelstart = new Panel();
             label6 = new Label();
+            pictureBox5 = new PictureBox();
+            panelresult = new Panel();
+            label5 = new Label();
+            pictureBox4 = new PictureBox();
+            button1 = new Button();
+            panelcandidate = new Panel();
+            label4 = new Label();
+            pictureBox3 = new PictureBox();
+            panelvoters = new Panel();
+            label3 = new Label();
+            pictureBox2 = new PictureBox();
+            panelhome = new Panel();
+            label2 = new Label();
+            pictureBox1 = new PictureBox();
+            labeladmin = new Label();
+            pnlMainContent = new Panel();
+            btnRefresh = new Button();
+            lblCandidatesTitle = new Label();
+            dgvCandidates = new DataGridView();
             pnlHeader.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)picLogo).BeginInit();
             panel1.SuspendLayout();
-            panelhome.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
-            panelvoters.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
-            panelcandidate.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox3).BeginInit();
+            panelstart.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox5).BeginInit();
             panelresult.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox4).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)pictureBox5).BeginInit();
-            panelstart.SuspendLayout();
+            panelcandidate.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox3).BeginInit();
+            panelvoters.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
+            panelhome.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
+            pnlMainContent.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvCandidates).BeginInit();
             SuspendLayout();
             // 
             // pnlHeader
@@ -117,7 +123,7 @@
             btnLogout.Name = "btnLogout";
             btnLogout.Size = new Size(123, 36);
             btnLogout.TabIndex = 3;
-            btnLogout.Text = "Lgout";
+            btnLogout.Text = "Logout";
             btnLogout.UseVisualStyleBackColor = true;
             // 
             // lblSystemTitle
@@ -158,114 +164,75 @@
             panel1.Size = new Size(162, 659);
             panel1.TabIndex = 3;
             // 
-            // labeladmin
+            // panelstart
             // 
-            labeladmin.AutoSize = true;
-            labeladmin.BackColor = Color.SlateGray;
-            labeladmin.Font = new Font("Times New Roman", 18F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            labeladmin.ForeColor = Color.Navy;
-            labeladmin.Location = new Point(492, 79);
-            labeladmin.Name = "labeladmin";
-            labeladmin.Size = new Size(264, 26);
-            labeladmin.TabIndex = 4;
-            labeladmin.Text = "Wellcome Administrator";
+            panelstart.Controls.Add(label6);
+            panelstart.Controls.Add(pictureBox5);
+            panelstart.Cursor = Cursors.Hand;
+            panelstart.Location = new Point(1, 440);
+            panelstart.Name = "panelstart";
+            panelstart.Size = new Size(161, 60);
+            panelstart.TabIndex = 6;
             // 
-            // panelhome
+            // label6
             // 
-            panelhome.Controls.Add(label2);
-            panelhome.Controls.Add(pictureBox1);
-            panelhome.Location = new Point(0, 44);
-            panelhome.Name = "panelhome";
-            panelhome.Size = new Size(162, 54);
-            panelhome.TabIndex = 0;
+            label6.AutoSize = true;
+            label6.BackColor = Color.FromArgb(15, 22, 40);
+            label6.Cursor = Cursors.Hand;
+            label6.Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label6.ForeColor = Color.White;
+            label6.Location = new Point(49, 24);
+            label6.Name = "label6";
+            label6.Size = new Size(107, 21);
+            label6.TabIndex = 9;
+            label6.Text = "Start Election";
             // 
-            // pictureBox1
+            // pictureBox5
             // 
-            pictureBox1.BackgroundImage = Properties.Resources._12;
-            pictureBox1.BackgroundImageLayout = ImageLayout.Zoom;
-            pictureBox1.Location = new Point(0, 4);
-            pictureBox1.Margin = new Padding(4);
-            pictureBox1.Name = "pictureBox1";
-            pictureBox1.Size = new Size(51, 48);
-            pictureBox1.TabIndex = 1;
-            pictureBox1.TabStop = false;
+            pictureBox5.BackgroundImage = Properties.Resources.tt;
+            pictureBox5.BackgroundImageLayout = ImageLayout.Zoom;
+            pictureBox5.Cursor = Cursors.Hand;
+            pictureBox5.Location = new Point(-1, 4);
+            pictureBox5.Margin = new Padding(4);
+            pictureBox5.Name = "pictureBox5";
+            pictureBox5.Size = new Size(51, 51);
+            pictureBox5.TabIndex = 5;
+            pictureBox5.TabStop = false;
             // 
-            // label2
+            // panelresult
             // 
-            label2.AutoSize = true;
-            label2.BackColor = Color.FromArgb(15, 22, 40);
-            label2.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label2.ForeColor = Color.White;
-            label2.Location = new Point(58, 17);
-            label2.Name = "label2";
-            label2.Size = new Size(56, 21);
-            label2.TabIndex = 5;
-            label2.Text = "Home";
+            panelresult.Controls.Add(label5);
+            panelresult.Controls.Add(pictureBox4);
+            panelresult.Cursor = Cursors.Hand;
+            panelresult.Location = new Point(4, 347);
+            panelresult.Name = "panelresult";
+            panelresult.Size = new Size(158, 50);
+            panelresult.TabIndex = 5;
             // 
-            // panelvoters
+            // label5
             // 
-            panelvoters.Controls.Add(label3);
-            panelvoters.Controls.Add(pictureBox2);
-            panelvoters.Location = new Point(3, 141);
-            panelvoters.Name = "panelvoters";
-            panelvoters.Size = new Size(156, 52);
-            panelvoters.TabIndex = 1;
+            label5.AutoSize = true;
+            label5.BackColor = Color.FromArgb(15, 22, 40);
+            label5.Cursor = Cursors.Hand;
+            label5.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label5.ForeColor = Color.White;
+            label5.Location = new Point(59, 19);
+            label5.Name = "label5";
+            label5.Size = new Size(64, 21);
+            label5.TabIndex = 8;
+            label5.Text = "Results";
             // 
-            // pictureBox2
+            // pictureBox4
             // 
-            pictureBox2.BackgroundImage = Properties.Resources._19;
-            pictureBox2.BackgroundImageLayout = ImageLayout.Zoom;
-            pictureBox2.Location = new Point(0, 5);
-            pictureBox2.Margin = new Padding(4);
-            pictureBox2.Name = "pictureBox2";
-            pictureBox2.Size = new Size(48, 48);
-            pictureBox2.TabIndex = 2;
-            pictureBox2.TabStop = false;
-            // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.BackColor = Color.FromArgb(15, 22, 40);
-            label3.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label3.ForeColor = Color.White;
-            label3.Location = new Point(58, 18);
-            label3.Name = "label3";
-            label3.Size = new Size(58, 21);
-            label3.TabIndex = 6;
-            label3.Text = "Voters";
-            label3.Click += label3_Click_1;
-            // 
-            // panelcandidate
-            // 
-            panelcandidate.Controls.Add(label4);
-            panelcandidate.Controls.Add(pictureBox3);
-            panelcandidate.Location = new Point(0, 237);
-            panelcandidate.Name = "panelcandidate";
-            panelcandidate.Size = new Size(162, 51);
-            panelcandidate.TabIndex = 2;
-            // 
-            // pictureBox3
-            // 
-            pictureBox3.BackgroundImage = Properties.Resources._14;
-            pictureBox3.BackgroundImageLayout = ImageLayout.Zoom;
-            pictureBox3.Location = new Point(4, 5);
-            pictureBox3.Margin = new Padding(4);
-            pictureBox3.Name = "pictureBox3";
-            pictureBox3.Size = new Size(47, 48);
-            pictureBox3.TabIndex = 3;
-            pictureBox3.TabStop = false;
-            // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.BackColor = Color.FromArgb(15, 22, 40);
-            label4.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label4.ForeColor = Color.White;
-            label4.Location = new Point(58, 19);
-            label4.Name = "label4";
-            label4.Size = new Size(95, 21);
-            label4.TabIndex = 7;
-            label4.Text = "Candidates";
+            pictureBox4.BackgroundImage = Properties.Resources._17;
+            pictureBox4.BackgroundImageLayout = ImageLayout.Zoom;
+            pictureBox4.Cursor = Cursors.Hand;
+            pictureBox4.Location = new Point(0, 4);
+            pictureBox4.Margin = new Padding(4);
+            pictureBox4.Name = "pictureBox4";
+            pictureBox4.Size = new Size(47, 48);
+            pictureBox4.TabIndex = 4;
+            pictureBox4.TabStop = false;
             // 
             // button1
             // 
@@ -276,73 +243,175 @@
             button1.Name = "button1";
             button1.Size = new Size(158, 47);
             button1.TabIndex = 4;
-            button1.Text = "Lgout";
+            button1.Text = "Logout";
             button1.UseVisualStyleBackColor = true;
             // 
-            // panelresult
+            // panelcandidate
             // 
-            panelresult.Controls.Add(label5);
-            panelresult.Controls.Add(pictureBox4);
-            panelresult.Location = new Point(4, 347);
-            panelresult.Name = "panelresult";
-            panelresult.Size = new Size(158, 50);
-            panelresult.TabIndex = 5;
+            panelcandidate.Controls.Add(label4);
+            panelcandidate.Controls.Add(pictureBox3);
+            panelcandidate.Cursor = Cursors.Hand;
+            panelcandidate.Location = new Point(0, 237);
+            panelcandidate.Name = "panelcandidate";
+            panelcandidate.Size = new Size(162, 51);
+            panelcandidate.TabIndex = 2;
             // 
-            // pictureBox4
+            // label4
             // 
-            pictureBox4.BackgroundImage = Properties.Resources._17;
-            pictureBox4.BackgroundImageLayout = ImageLayout.Zoom;
-            pictureBox4.Location = new Point(0, 4);
-            pictureBox4.Margin = new Padding(4);
-            pictureBox4.Name = "pictureBox4";
-            pictureBox4.Size = new Size(47, 48);
-            pictureBox4.TabIndex = 4;
-            pictureBox4.TabStop = false;
+            label4.AutoSize = true;
+            label4.BackColor = Color.FromArgb(15, 22, 40);
+            label4.Cursor = Cursors.Hand;
+            label4.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label4.ForeColor = Color.White;
+            label4.Location = new Point(58, 19);
+            label4.Name = "label4";
+            label4.Size = new Size(95, 21);
+            label4.TabIndex = 7;
+            label4.Text = "Candidates";
             // 
-            // label5
+            // pictureBox3
             // 
-            label5.AutoSize = true;
-            label5.BackColor = Color.FromArgb(15, 22, 40);
-            label5.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label5.ForeColor = Color.White;
-            label5.Location = new Point(59, 19);
-            label5.Name = "label5";
-            label5.Size = new Size(64, 21);
-            label5.TabIndex = 8;
-            label5.Text = "Results";
-            label5.Click += label5_Click;
+            pictureBox3.BackgroundImage = Properties.Resources._14;
+            pictureBox3.BackgroundImageLayout = ImageLayout.Zoom;
+            pictureBox3.Cursor = Cursors.Hand;
+            pictureBox3.Location = new Point(4, 5);
+            pictureBox3.Margin = new Padding(4);
+            pictureBox3.Name = "pictureBox3";
+            pictureBox3.Size = new Size(47, 48);
+            pictureBox3.TabIndex = 3;
+            pictureBox3.TabStop = false;
             // 
-            // pictureBox5
+            // panelvoters
             // 
-            pictureBox5.BackgroundImage = Properties.Resources.tt;
-            pictureBox5.BackgroundImageLayout = ImageLayout.Zoom;
-            pictureBox5.Location = new Point(-1, 4);
-            pictureBox5.Margin = new Padding(4);
-            pictureBox5.Name = "pictureBox5";
-            pictureBox5.Size = new Size(51, 51);
-            pictureBox5.TabIndex = 5;
-            pictureBox5.TabStop = false;
+            panelvoters.Controls.Add(label3);
+            panelvoters.Controls.Add(pictureBox2);
+            panelvoters.Cursor = Cursors.Hand;
+            panelvoters.Location = new Point(3, 141);
+            panelvoters.Name = "panelvoters";
+            panelvoters.Size = new Size(156, 52);
+            panelvoters.TabIndex = 1;
             // 
-            // panelstart
+            // label3
             // 
-            panelstart.Controls.Add(label6);
-            panelstart.Controls.Add(pictureBox5);
-            panelstart.Location = new Point(1, 440);
-            panelstart.Name = "panelstart";
-            panelstart.Size = new Size(161, 60);
-            panelstart.TabIndex = 6;
+            label3.AutoSize = true;
+            label3.BackColor = Color.FromArgb(15, 22, 40);
+            label3.Cursor = Cursors.Hand;
+            label3.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label3.ForeColor = Color.White;
+            label3.Location = new Point(58, 18);
+            label3.Name = "label3";
+            label3.Size = new Size(58, 21);
+            label3.TabIndex = 6;
+            label3.Text = "Voters";
             // 
-            // label6
+            // pictureBox2
             // 
-            label6.AutoSize = true;
-            label6.BackColor = Color.FromArgb(15, 22, 40);
-            label6.Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label6.ForeColor = Color.White;
-            label6.Location = new Point(49, 24);
-            label6.Name = "label6";
-            label6.Size = new Size(107, 21);
-            label6.TabIndex = 9;
-            label6.Text = "Start Election";
+            pictureBox2.BackgroundImage = Properties.Resources._19;
+            pictureBox2.BackgroundImageLayout = ImageLayout.Zoom;
+            pictureBox2.Cursor = Cursors.Hand;
+            pictureBox2.Location = new Point(0, 5);
+            pictureBox2.Margin = new Padding(4);
+            pictureBox2.Name = "pictureBox2";
+            pictureBox2.Size = new Size(48, 48);
+            pictureBox2.TabIndex = 2;
+            pictureBox2.TabStop = false;
+            // 
+            // panelhome
+            // 
+            panelhome.Controls.Add(label2);
+            panelhome.Controls.Add(pictureBox1);
+            panelhome.Cursor = Cursors.Hand;
+            panelhome.Location = new Point(0, 44);
+            panelhome.Name = "panelhome";
+            panelhome.Size = new Size(162, 54);
+            panelhome.TabIndex = 0;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.BackColor = Color.FromArgb(15, 22, 40);
+            label2.Cursor = Cursors.Hand;
+            label2.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label2.ForeColor = Color.White;
+            label2.Location = new Point(58, 17);
+            label2.Name = "label2";
+            label2.Size = new Size(56, 21);
+            label2.TabIndex = 5;
+            label2.Text = "Home";
+            // 
+            // pictureBox1
+            // 
+            pictureBox1.BackgroundImage = Properties.Resources._12;
+            pictureBox1.BackgroundImageLayout = ImageLayout.Zoom;
+            pictureBox1.Cursor = Cursors.Hand;
+            pictureBox1.Location = new Point(0, 4);
+            pictureBox1.Margin = new Padding(4);
+            pictureBox1.Name = "pictureBox1";
+            pictureBox1.Size = new Size(51, 48);
+            pictureBox1.TabIndex = 1;
+            pictureBox1.TabStop = false;
+            // 
+            // labeladmin
+            // 
+            labeladmin.AutoSize = true;
+            labeladmin.BackColor = Color.SlateGray;
+            labeladmin.Font = new Font("Times New Roman", 18F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            labeladmin.ForeColor = Color.Navy;
+            labeladmin.Location = new Point(492, 79);
+            labeladmin.Name = "labeladmin";
+            labeladmin.Size = new Size(264, 26);
+            labeladmin.TabIndex = 4;
+            labeladmin.Text = "Welcome Administrator";
+            // 
+            // pnlMainContent
+            // 
+            pnlMainContent.BackColor = Color.White;
+            pnlMainContent.Controls.Add(btnRefresh);
+            pnlMainContent.Controls.Add(lblCandidatesTitle);
+            pnlMainContent.Controls.Add(dgvCandidates);
+            pnlMainContent.Location = new Point(162, 108);
+            pnlMainContent.Name = "pnlMainContent";
+            pnlMainContent.Size = new Size(1113, 626);
+            pnlMainContent.TabIndex = 5;
+            // 
+            // btnRefresh
+            // 
+            btnRefresh.BackColor = Color.DodgerBlue;
+            btnRefresh.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnRefresh.ForeColor = Color.White;
+            btnRefresh.Location = new Point(950, 20);
+            btnRefresh.Name = "btnRefresh";
+            btnRefresh.Size = new Size(140, 35);
+            btnRefresh.TabIndex = 2;
+            btnRefresh.Text = "🔄 Refresh";
+            btnRefresh.UseVisualStyleBackColor = false;
+            // 
+            // lblCandidatesTitle
+            // 
+            lblCandidatesTitle.AutoSize = true;
+            lblCandidatesTitle.Font = new Font("Times New Roman", 20.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblCandidatesTitle.ForeColor = Color.Navy;
+            lblCandidatesTitle.Location = new Point(20, 20);
+            lblCandidatesTitle.Name = "lblCandidatesTitle";
+            lblCandidatesTitle.Size = new Size(237, 31);
+            lblCandidatesTitle.TabIndex = 1;
+            lblCandidatesTitle.Text = "Dashboard Overview";
+            // 
+            // dgvCandidates
+            // 
+            dgvCandidates.AllowUserToAddRows = false;
+            dgvCandidates.AllowUserToDeleteRows = false;
+            dgvCandidates.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvCandidates.BackgroundColor = Color.White;
+            dgvCandidates.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvCandidates.Location = new Point(20, 70);
+            dgvCandidates.Name = "dgvCandidates";
+            dgvCandidates.ReadOnly = true;
+            dgvCandidates.RowHeadersVisible = false;
+            dgvCandidates.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvCandidates.Size = new Size(1070, 540);
+            dgvCandidates.TabIndex = 0;
+            dgvCandidates.Visible = false;
             // 
             // frmAdminDashboard
             // 
@@ -350,31 +419,35 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.SlateGray;
             ClientSize = new Size(1275, 734);
+            Controls.Add(pnlMainContent);
             Controls.Add(labeladmin);
             Controls.Add(panel1);
             Controls.Add(pnlHeader);
             Name = "frmAdminDashboard";
-            Text = "frmAdminDashboard";
-            Load += frmAdminDashboard_Load;
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Admin Dashboard - Election System";
             pnlHeader.ResumeLayout(false);
             pnlHeader.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();
             panel1.ResumeLayout(false);
-            panelhome.ResumeLayout(false);
-            panelhome.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
-            panelvoters.ResumeLayout(false);
-            panelvoters.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
+            panelstart.ResumeLayout(false);
+            panelstart.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox5).EndInit();
+            panelresult.ResumeLayout(false);
+            panelresult.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox4).BeginInit();
             panelcandidate.ResumeLayout(false);
             panelcandidate.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox3).EndInit();
-            panelresult.ResumeLayout(false);
-            panelresult.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox4).EndInit();
-            ((System.ComponentModel.ISupportInitialize)pictureBox5).EndInit();
-            panelstart.ResumeLayout(false);
-            panelstart.PerformLayout();
+            panelvoters.ResumeLayout(false);
+            panelvoters.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
+            panelhome.ResumeLayout(false);
+            panelhome.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
+            pnlMainContent.ResumeLayout(false);
+            pnlMainContent.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvCandidates).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -405,5 +478,9 @@
         private Panel panelstart;
         private Label label6;
         private PictureBox pictureBox5;
+        private Panel pnlMainContent;
+        private DataGridView dgvCandidates;
+        private Label lblCandidatesTitle;
+        private Button btnRefresh;
     }
 }
