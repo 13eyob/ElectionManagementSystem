@@ -19,5 +19,8 @@
     <Compile Update="Forms\frmRegister.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\frmVoterDashboard.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
 </Project>

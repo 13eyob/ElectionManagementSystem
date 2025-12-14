@@ -1,4 +1,5 @@
-﻿using Election.DATA;
+﻿// Location: Election.API/Controllers/CandidateController.cs
+using Election.DATA;
 using Election.DATA.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -31,15 +32,16 @@ namespace Election.API.Controllers
                     .Select(c => new
                     {
                         Id = c.Id,
-                        Name = c.FullName,           // Changed from FullName to Name
-                        Party = c.PartyAffiliation,  // Changed from PartyAffiliation to Party
+                        Name = c.FullName,
+                        Party = c.PartyAffiliation,
                         Region = c.Region,
                         Age = c.Age,
+                        PhotoPath = c.PhotoFilePath,  // ✅ ADDED THIS LINE
                         IsApproved = c.IsApproved
                     })
                     .ToListAsync();
 
-                return Ok(candidates);  // ✅ Returns direct list, no wrapper
+                return Ok(candidates);
             }
             catch (Exception ex)
             {
@@ -225,7 +227,7 @@ namespace Election.API.Controllers
             }
         }
 
-        // ============ ✅ YOUR EXISTING ENDPOINTS (KEEP THESE) ============
+        // ============ ✅ YOUR EXISTING ENDPOINTS (UNCHANGED) ============
 
         [HttpPost("submit")]
         public async Task<IActionResult> SubmitCandidate([FromForm] CandidateRequest model)

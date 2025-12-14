@@ -17,15 +17,23 @@ namespace Election.DATA.Models
         [Required]
         public string Password { get; set; } = "";
 
+        [Required]
+        [EmailAddress]
         public string Email { get; set; } = "";
+
         public int Age { get; set; }
+
+        [Required]
         public string Region { get; set; } = "";
 
         [Required]
         public string Role { get; set; } = "Voter";
 
-        public bool IsApproved { get; set; }
-        public bool HasVoted { get; set; }
+        public bool IsApproved { get; set; } = false;
+
+        // 🔴 REQUIRED FOR VOTING
+        public bool HasVoted { get; set; } = false;
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

@@ -184,7 +184,8 @@ namespace Election.UI.Forms
                     }
                     else if (role == "Voter")
                     {
-                        //new frmVoterDashboard().Show();
+                        // ✅ Simple fix: Pass dummy values since parameters are required
+                        new frmVoterDashboard(1, "voter@email.com").Show();
                     }
                     else if (role == "Admin")
                     {

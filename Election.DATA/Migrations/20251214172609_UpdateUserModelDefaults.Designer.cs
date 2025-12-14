@@ -4,6 +4,7 @@ using Election.DATA;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Election.DATA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251214172609_UpdateUserModelDefaults")]
+    partial class UpdateUserModelDefaults
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -123,7 +126,7 @@ namespace Election.DATA.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedDate = new DateTime(2025, 12, 14, 20, 6, 10, 503, DateTimeKind.Utc).AddTicks(5352),
+                            CreatedDate = new DateTime(2025, 12, 14, 17, 26, 8, 846, DateTimeKind.Utc).AddTicks(5695),
                             ElectionTitle = "General Election 2024",
                             IsElectionActive = false,
                             RegistrationOpen = true,
@@ -204,9 +207,6 @@ namespace Election.DATA.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex(new[] { "UserId" }, "IX_Votes_UserId_Unique")
-                        .IsUnique();
-
                     b.ToTable("Votes");
                 });
 
@@ -215,13 +215,13 @@ namespace Election.DATA.Migrations
                     b.HasOne("Election.DATA.Models.Candidate", "Candidate")
                         .WithMany()
                         .HasForeignKey("CandidateId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Election.DATA.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Candidate");

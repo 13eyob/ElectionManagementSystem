@@ -11,24 +11,36 @@ namespace Election.DATA
         {
         }
 
-        // Existing tables
+        // Tables
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Candidate> Candidates { get; set; } = null!;
         public DbSet<ElectionSettings> ElectionSettings { get; set; } = null!;
-
-        // 🔥 NEW: Votes table
         public DbSet<Vote> Votes { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // 🔐 Prevent double voting (ONE vote per user)
+            // ✅ ONE USER = ONE VOTE (DB LEVEL)
             modelBuilder.Entity<Vote>()
                 .HasIndex(v => v.UserId)
                 .IsUnique();
 
-            // 🗳 Seed initial election settings
+            // ✅ Foreign key: Vote → User
+            modelBuilder.Entity<Vote>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ✅ Foreign key: Vote → Candidate
+            modelBuilder.Entity<Vote>()
+                .HasOne(v => v.Candidate)
+                .WithMany()
+                .HasForeignKey(v => v.CandidateId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ✅ EXISTING SEED DATA (UNCHANGED)
             modelBuilder.Entity<ElectionSettings>().HasData(
                 new ElectionSettings
                 {

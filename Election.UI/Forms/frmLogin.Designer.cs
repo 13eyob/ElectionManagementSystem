@@ -89,7 +89,6 @@
             linkRegister.TabIndex = 4;
             linkRegister.TabStop = true;
             linkRegister.Text = "Need an account? Register here";
-            // NOTE: LinkClicked event will be connected in code-behind
             // 
             // button1
             // 
@@ -102,7 +101,6 @@
             button1.TabIndex = 3;
             button1.Text = "Login";
             button1.UseVisualStyleBackColor = false;
-            // NOTE: Click event will be connected in code-behind
             // 
             // txtPassword
             // 
@@ -114,7 +112,6 @@
             txtPassword.Name = "txtPassword";
             txtPassword.Size = new Size(333, 36);
             txtPassword.TabIndex = 2;
-            // NOTE: Text will be set in code-behind Load event
             // 
             // txtUsername
             // 
@@ -126,7 +123,6 @@
             txtUsername.Name = "txtUsername";
             txtUsername.Size = new Size(333, 36);
             txtUsername.TabIndex = 1;
-            // NOTE: Text will be set in code-behind Load event
             // 
             // label1
             // 
