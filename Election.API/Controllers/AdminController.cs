@@ -17,7 +17,7 @@ namespace Election.API.Controllers
         }
 
         // =========================
-        // ELECTION CONTROL
+        // ✅ EXISTING ELECTION CONTROL (UNCHANGED)
         // =========================
 
         // GET: api/admin/election-status
@@ -91,7 +91,7 @@ namespace Election.API.Controllers
         }
 
         // =========================
-        // CANDIDATE APPROVAL
+        // ✅ EXISTING CANDIDATE APPROVAL (UNCHANGED)
         // =========================
 
         // PUT: api/admin/approve-candidate/{id}
@@ -111,7 +111,7 @@ namespace Election.API.Controllers
         }
 
         // =========================
-        // VOTERS
+        // ✅ EXISTING VOTERS ENDPOINT (UNCHANGED)
         // =========================
 
         // GET: api/admin/voters
@@ -135,7 +135,7 @@ namespace Election.API.Controllers
         }
 
         // =========================
-        // REAL ELECTION RESULTS
+        // ✅ EXISTING ELECTION RESULTS (UNCHANGED)
         // =========================
 
         // GET: api/admin/election-results
@@ -171,7 +171,147 @@ namespace Election.API.Controllers
         }
 
         // =========================
-        // INTERNAL HELPERS
+        // ✅ NEW ENDPOINTS: ADDED FOR ADMIN DASHBOARD
+        // =========================
+
+        // ✅ NEW: Get detailed voters list for admin dashboard
+        // GET: api/admin/voters-detailed
+        [HttpGet("voters-detailed")]
+        public async Task<IActionResult> GetVotersDetailed()
+        {
+            try
+            {
+                var voters = await _context.Users
+                    .Where(u => u.Role == "Voter")
+                    .OrderByDescending(u => u.CreatedAt)
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.Username,
+                        u.FullName,
+                        u.Email,
+                        u.Region,
+                        u.Age,
+                        u.Role,
+                        u.IsApproved,
+                        u.HasVoted,
+                        RegisteredDate = u.CreatedAt,
+                        IsCandidate = _context.Candidates.Any(c => c.Email == u.Email)
+                    })
+                    .ToListAsync();
+
+                return Ok(new { success = true, voters });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // ✅ NEW: Get election statistics for dashboard
+        // GET: api/admin/dashboard-statistics
+        [HttpGet("dashboard-statistics")]
+        public async Task<IActionResult> GetDashboardStatistics()
+        {
+            try
+            {
+                var totalVoters = await _context.Users.CountAsync(u => u.Role == "Voter");
+                var votedCount = await _context.Users.CountAsync(u => u.Role == "Voter" && u.HasVoted);
+                var candidatesCount = await _context.Candidates.CountAsync();
+                var approvedCandidates = await _context.Candidates.CountAsync(c => c.IsApproved);
+                var pendingCandidates = await _context.Candidates.CountAsync(c => c.Status == "Pending");
+                var totalVotes = await _context.Votes.CountAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    statistics = new
+                    {
+                        TotalVoters = totalVoters,
+                        VotedCount = votedCount,
+                        PendingVoters = totalVoters - votedCount,
+                        TotalCandidates = candidatesCount,
+                        ApprovedCandidates = approvedCandidates,
+                        PendingCandidates = pendingCandidates,
+                        TotalVotes = totalVotes,
+                        VoterTurnout = totalVoters > 0 ? Math.Round((votedCount * 100.0) / totalVoters, 2) : 0
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // ✅ NEW: Get candidate details with photo
+        // GET: api/admin/candidate-with-photo/{id}
+        [HttpGet("candidate-with-photo/{id}")]
+        public async Task<IActionResult> GetCandidateWithPhoto(int id)
+        {
+            try
+            {
+                var candidate = await _context.Candidates
+                    .FirstOrDefaultAsync(c => c.Id == id);
+
+                if (candidate == null)
+                    return NotFound(new { success = false, message = "Candidate not found" });
+
+                var result = new
+                {
+                    candidate.Id,
+                    candidate.FullName,
+                    candidate.Age,
+                    candidate.Region,
+                    candidate.PartyAffiliation,
+                    candidate.Email,
+                    candidate.Phone,
+                    candidate.Status,
+                    candidate.IsApproved,
+                    candidate.IsRejected,
+                    candidate.ApplicationDate,
+                    candidate.PhotoFilePath,
+                    HasPhoto = !string.IsNullOrEmpty(candidate.PhotoFilePath),
+                    VotesReceived = await _context.Votes.CountAsync(v => v.CandidateId == candidate.Id)
+                };
+
+                return Ok(new { success = true, candidate = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // ✅ NEW: Toggle voter account status
+        // PUT: api/admin/toggle-voter-status/{id}
+        [HttpPut("toggle-voter-status/{id}")]
+        public async Task<IActionResult> ToggleVoterStatus(int id)
+        {
+            try
+            {
+                var voter = await _context.Users.FindAsync(id);
+                if (voter == null)
+                    return NotFound(new { success = false, message = "Voter not found" });
+
+                voter.IsApproved = !voter.IsApproved;
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Voter account {(voter.IsApproved ? "enabled" : "disabled")}",
+                    isApproved = voter.IsApproved
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // =========================
+        // ✅ INTERNAL HELPERS (UNCHANGED)
         // =========================
 
         private async Task<ElectionSettings> GetOrCreateSettingsAsync()

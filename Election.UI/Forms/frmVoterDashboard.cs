@@ -80,6 +80,8 @@ namespace Election.UI.Forms
         {
             try
             {
+                // ⚠️ TEMPORARILY COMMENTED OUT - Voting check disabled for testing
+                /*
                 // Check if already voted - USING CORRECT DTO
                 var hasVotedResponse = await _httpClient.GetAsync($"api/vote/hasvoted/{_voterId}");
                 if (hasVotedResponse.IsSuccessStatusCode)
@@ -96,6 +98,7 @@ namespace Election.UI.Forms
                         return;
                     }
                 }
+                */
 
                 // Load approved candidates
                 await LoadApprovedCandidates();
@@ -525,6 +528,11 @@ namespace Election.UI.Forms
             loginForm.Show();
 
             this.Close(); // Close voter dashboard completely
+        }
+
+        private void flowCandidates_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }

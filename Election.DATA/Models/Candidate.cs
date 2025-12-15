@@ -38,9 +38,18 @@ namespace Election.DATA.Models
         public string PhotoFilePath { get; set; } = "";
 
         public DateTime ApplicationDate { get; set; } = DateTime.Now;
-        public string Status { get; set; } = "Pending";
 
-        // 🔥 NEW: Added for admin approval system
+        // Status properties - UPDATED
+        public string Status { get; set; } = "Pending"; // "Pending", "Approved", "Rejected"
         public bool IsApproved { get; set; } = false;
+        public bool IsRejected { get; set; } = false; // NEW: Added for admin dashboard filtering
+        public DateTime? ApprovalDate { get; set; } // NEW: Added
+        public string AdminRemarks { get; set; } = ""; // NEW: Added
+
+        // NEW: For admin dashboard statistics
+        [MaxLength(500)]
+        public string ShortBio { get; set; } = "";
+
+        public int VotesReceived { get; set; } = 0; // NEW: To track vote count
     }
 }

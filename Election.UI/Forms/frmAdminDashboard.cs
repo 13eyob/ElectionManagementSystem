@@ -21,9 +21,22 @@ namespace Election.UI.Forms
         private DataGridView _dgvCandidateUsers;
         private Label[] _statValueLabels = new Label[6];
 
+        // Track previous window size for responsive adjustments
+        private Size _previousSize;
+        private bool _isResizing = false;
+
         public frmAdminDashboard()
         {
             InitializeComponent();
+
+            // Track initial size
+            _previousSize = this.Size;
+
+            // Set form properties
+            this.MaximizeBox = true;
+            this.MinimizeBox = true;
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.MinimumSize = new Size(900, 600);
 
             // Initialize HttpClient
             _client = new HttpClient
@@ -44,6 +57,9 @@ namespace Election.UI.Forms
             // Form events
             this.Load += frmAdminDashboard_Load;
             this.FormClosing += FrmAdminDashboard_FormClosing;
+            this.Resize += FrmAdminDashboard_Resize;
+            this.ResizeBegin += FrmAdminDashboard_ResizeBegin;
+            this.ResizeEnd += FrmAdminDashboard_ResizeEnd;
 
             // Button events
             btnLogout.Click += BtnLogout_Click;
@@ -62,6 +78,169 @@ namespace Election.UI.Forms
             MakePanelClickable(panelstart, PanelStart_Click);
         }
 
+        #region Responsive Layout Methods
+        private void FrmAdminDashboard_ResizeBegin(object sender, EventArgs e)
+        {
+            _isResizing = true;
+        }
+
+        private void FrmAdminDashboard_ResizeEnd(object sender, EventArgs e)
+        {
+            _isResizing = false;
+            AdjustLayoutForSize();
+        }
+
+        private void FrmAdminDashboard_Resize(object sender, EventArgs e)
+        {
+            if (!_isResizing) return;
+
+            AdjustLayoutForSize();
+            _previousSize = this.Size;
+        }
+
+        private void AdjustLayoutForSize()
+        {
+            try
+            {
+                // Update main content panel size and position
+                pnlMainContent.SuspendLayout();
+
+                int sidebarWidth = panel1.Width;
+                int headerHeight = pnlHeader.Height;
+                int adminLabelHeight = 35; // Approximate height of admin label
+
+                // Calculate available space
+                int availableWidth = this.ClientSize.Width - sidebarWidth;
+                int availableHeight = this.ClientSize.Height - headerHeight - adminLabelHeight;
+
+                // Update main content panel
+                pnlMainContent.Location = new Point(sidebarWidth, headerHeight + adminLabelHeight);
+                pnlMainContent.Size = new Size(availableWidth, availableHeight);
+
+                // Center the admin label
+                labeladmin.Left = (this.ClientSize.Width - labeladmin.Width) / 2;
+                labeladmin.Top = headerHeight + 5;
+
+                // Update DataGridView if visible
+                if (dgvCandidates.Visible)
+                {
+                    dgvCandidates.Location = new Point(20, 70);
+                    dgvCandidates.Size = new Size(pnlMainContent.Width - 40, pnlMainContent.Height - 90);
+                }
+
+                // Update refresh button position
+                btnRefresh.Left = pnlMainContent.Width - btnRefresh.Width - 20;
+                btnRefresh.Top = 20;
+
+                // Update title position
+                lblCandidatesTitle.Left = 20;
+                lblCandidatesTitle.Top = 20;
+
+                // Update logout button in header
+                btnLogout.Left = pnlHeader.Width - btnLogout.Width - 20;
+                btnLogout.Top = (pnlHeader.Height - btnLogout.Height) / 2;
+
+                // Update links in header
+                lnkHome.Left = btnLogout.Left - lnkHome.Width - 30;
+                lnkHome.Top = (pnlHeader.Height - lnkHome.Height) / 2;
+
+                lnkMyProfile.Left = lnkHome.Left - lnkMyProfile.Width - 20;
+                lnkMyProfile.Top = (pnlHeader.Height - lnkMyProfile.Height) / 2;
+
+                // Adjust sidebar height
+                panel1.Height = this.ClientSize.Height - pnlHeader.Height;
+
+                pnlMainContent.ResumeLayout();
+
+                // Force a refresh of custom content
+                if (_tabControl != null && _tabControl.Visible)
+                {
+                    _tabControl.Size = new Size(pnlMainContent.Width, pnlMainContent.Height - 100);
+                }
+
+                // Refresh statistics layout if visible
+                if (_statValueLabels[0] != null && _statValueLabels[0].Visible)
+                {
+                    AdjustStatisticsLayout();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Layout adjustment error: {ex.Message}");
+            }
+        }
+
+        private void AdjustStatisticsLayout()
+        {
+            try
+            {
+                var statsPanel = pnlMainContent.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
+                if (statsPanel != null)
+                {
+                    int availableWidth = pnlMainContent.Width - 40;
+
+                    // Calculate optimal card width
+                    int cardWidth = 160;
+                    int cardsPerRow = Math.Max(1, availableWidth / (cardWidth + 20));
+                    int totalWidth = cardsPerRow * (cardWidth + 10);
+
+                    statsPanel.Size = new Size(totalWidth, 150);
+                    statsPanel.Left = (pnlMainContent.Width - totalWidth) / 2;
+                }
+            }
+            catch
+            {
+                // Silently fail if statistics panel doesn't exist
+            }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Alt + F4 for close
+            if (keyData == (Keys.Alt | Keys.F4))
+            {
+                this.Close();
+                return true;
+            }
+
+            // Ctrl + R for refresh
+            if (keyData == (Keys.Control | Keys.R))
+            {
+                RefreshCurrentView();
+                return true;
+            }
+
+            // Ctrl + M for maximize/restore
+            if (keyData == (Keys.Control | Keys.M))
+            {
+                ToggleMaximize();
+                return true;
+            }
+
+            // Ctrl + Shift + M for minimize
+            if (keyData == (Keys.Control | Keys.Shift | Keys.M))
+            {
+                this.WindowState = FormWindowState.Minimized;
+                return true;
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void ToggleMaximize()
+        {
+            if (this.WindowState == FormWindowState.Maximized)
+            {
+                this.WindowState = FormWindowState.Normal;
+            }
+            else
+            {
+                this.WindowState = FormWindowState.Maximized;
+            }
+        }
+        #endregion
+
+        #region UI Interaction Methods
         private void MakePanelClickable(Panel panel, EventHandler clickHandler)
         {
             panel.Cursor = Cursors.Hand;
@@ -133,6 +312,9 @@ namespace Election.UI.Forms
             }
 
             HighlightPanel(panelhome);
+
+            // Perform initial layout adjustment
+            AdjustLayoutForSize();
         }
 
         private void FrmAdminDashboard_FormClosing(object sender, FormClosingEventArgs e)
@@ -161,6 +343,7 @@ namespace Election.UI.Forms
                 Console.WriteLine($"Cleanup error: {ex.Message}");
             }
         }
+        #endregion
 
         #region Navigation
         private void PanelHome_Click(object sender, EventArgs e)
@@ -216,6 +399,7 @@ namespace Election.UI.Forms
             ClearMainContent();
             lblCandidatesTitle.Text = "📊 DASHBOARD OVERVIEW";
             CreateDashboardStatistics();
+            AdjustLayoutForSize();
         }
 
         private void ShowCandidateAdminDashboard()
@@ -223,6 +407,7 @@ namespace Election.UI.Forms
             ClearMainContent();
             lblCandidatesTitle.Text = "👥 CANDIDATE ADMIN DASHBOARD";
             CreateCandidateAdminDashboard();
+            AdjustLayoutForSize();
         }
 
         private void ShowVoterManagementView()
@@ -230,6 +415,7 @@ namespace Election.UI.Forms
             ClearMainContent();
             lblCandidatesTitle.Text = "👤 VOTER MANAGEMENT";
             CreateVoterManagementPanel();
+            AdjustLayoutForSize();
         }
 
         private void ShowResultsView()
@@ -237,6 +423,7 @@ namespace Election.UI.Forms
             ClearMainContent();
             lblCandidatesTitle.Text = "📊 ELECTION RESULTS";
             CreateResultsPanel();
+            AdjustLayoutForSize();
         }
 
         private void ShowElectionControlView()
@@ -244,13 +431,14 @@ namespace Election.UI.Forms
             ClearMainContent();
             lblCandidatesTitle.Text = "⚡ ELECTION CONTROL";
             CreateElectionControlPanel();
+            AdjustLayoutForSize();
         }
 
         private void ClearMainContent()
         {
             // Remove all controls except the title and refresh button
             var controlsToRemove = pnlMainContent.Controls.Cast<Control>()
-                .Where(c => c != lblCandidatesTitle && c != btnRefresh)
+                .Where(c => c != lblCandidatesTitle && c != btnRefresh && c != dgvCandidates)
                 .ToList();
 
             foreach (var control in controlsToRemove)
@@ -260,6 +448,7 @@ namespace Election.UI.Forms
 
             lblCandidatesTitle.Visible = true;
             btnRefresh.Visible = true;
+            dgvCandidates.Visible = false;
         }
 
         private void RefreshCurrentView()
@@ -311,8 +500,9 @@ namespace Election.UI.Forms
                 Location = new Point(20, 80),
                 Size = new Size(1050, 150),
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                AutoScroll = true
+                WrapContents = true,
+                AutoScroll = false,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             string[] statLabels = { "Total Candidates", "Approved", "Pending", "Rejected", "Today", "This Week" };
@@ -340,6 +530,9 @@ namespace Election.UI.Forms
 
             // Load statistics
             LoadDashboardStatistics(lblLoading);
+
+            // Adjust layout
+            statsFlowPanel.Width = pnlMainContent.Width - 80;
         }
 
         private Panel CreateStatCard(string icon, string label, string value, int index)
@@ -400,15 +593,21 @@ namespace Election.UI.Forms
 
                     if (result.TryGetProperty("statistics", out var stats))
                     {
-                        UpdateStatCards(stats);
-                        lblLoading.Visible = false;
+                        this.Invoke((MethodInvoker)delegate
+                        {
+                            UpdateStatCards(stats);
+                            lblLoading.Visible = false;
+                        });
                     }
                 }
             }
             catch
             {
-                lblLoading.Text = "Error loading statistics";
-                lblLoading.ForeColor = Color.Red;
+                this.Invoke((MethodInvoker)delegate
+                {
+                    lblLoading.Text = "Error loading statistics";
+                    lblLoading.ForeColor = Color.Red;
+                });
             }
         }
 
@@ -477,7 +676,8 @@ namespace Election.UI.Forms
                 Location = new Point(0, 100),
                 Size = new Size(mainPanel.Width, mainPanel.Height - 100),
                 Appearance = TabAppearance.Normal,
-                ItemSize = new Size(120, 30)
+                ItemSize = new Size(120, 30),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
             // Add tabs
@@ -541,6 +741,7 @@ namespace Election.UI.Forms
             dgv.Columns.Add("Region", "Region");
             dgv.Columns.Add("Age", "Age");
             dgv.Columns.Add("Email", "Email");
+            dgv.Columns.Add("Votes", "Votes"); // ✅ ADDED: Vote count column
             dgv.Columns.Add("Status", "Status");
             dgv.Columns.Add("Date", "Applied On");
 
@@ -589,6 +790,7 @@ namespace Election.UI.Forms
             dgv.Columns.Add("Email", "Email");
             dgv.Columns.Add("Role", "Role");
             dgv.Columns.Add("Region", "Region");
+            dgv.Columns.Add("HasVoted", "Has Voted"); // ✅ ADDED: Voting status
             dgv.Columns.Add("RegisteredDate", "Registered Date");
             dgv.Columns.Add("IsCandidate", "Is Candidate");
 
@@ -610,19 +812,16 @@ namespace Election.UI.Forms
             switch (selectedTab)
             {
                 case "tabAll":
-                    await LoadCandidatesAsync(_dgvAllCandidates, null);
+                    await LoadCandidatesAsync(_dgvAllCandidates, "all");
                     break;
                 case "tabApproved":
-                    await LoadCandidatesAsync(_dgvApprovedCandidates, c =>
-                        c.GetProperty("isApproved").GetBoolean());
+                    await LoadCandidatesAsync(_dgvApprovedCandidates, "approved");
                     break;
                 case "tabPending":
-                    await LoadCandidatesAsync(_dgvPendingCandidates, c =>
-                        !c.GetProperty("isApproved").GetBoolean());
+                    await LoadCandidatesAsync(_dgvPendingCandidates, "pending");
                     break;
                 case "tabRejected":
-                    await LoadCandidatesAsync(_dgvRejectedCandidates, c =>
-                        c.GetProperty("status").GetString() == "Rejected");
+                    await LoadCandidatesAsync(_dgvRejectedCandidates, "rejected");
                     break;
                 case "tabUsers":
                     await LoadCandidateUsersAsync(_dgvCandidateUsers);
@@ -630,52 +829,87 @@ namespace Election.UI.Forms
             }
         }
 
-        private async Task LoadCandidatesAsync(DataGridView dgv, Func<JsonElement, bool> filter)
+        private async Task LoadCandidatesAsync(DataGridView dgv, string endpoint)
         {
             try
             {
+                dgv.SuspendLayout();
                 dgv.Rows.Clear();
                 Cursor = Cursors.WaitCursor;
 
-                var response = await _client.GetAsync("api/candidate/all");
+                string apiEndpoint = endpoint switch
+                {
+                    "pending" => "api/candidate/pending",
+                    "rejected" => "api/candidate/rejected",
+                    "approved" => "api/candidate/approved",
+                    _ => "api/candidate/all"
+                };
+
+                var response = await _client.GetAsync(apiEndpoint);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseString = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<JsonElement>(responseString);
 
-                    if (result.TryGetProperty("candidates", out var candidatesArray))
+                    if (endpoint == "approved")
                     {
-                        foreach (var candidate in candidatesArray.EnumerateArray())
+                        // Approved endpoint returns array directly
+                        var candidates = JsonSerializer.Deserialize<List<JsonElement>>(responseString);
+
+                        foreach (var candidate in candidates)
                         {
-                            if (filter != null && !filter(candidate))
-                                continue;
-
-                            string status = candidate.GetProperty("isApproved").GetBoolean()
-                                ? "✅ Approved"
-                                : "⏳ Pending";
-
                             dgv.Rows.Add(
                                 candidate.GetProperty("id").GetInt32(),
-                                candidate.GetProperty("fullName").GetString(),
-                                candidate.GetProperty("partyAffiliation").GetString(),
+                                candidate.GetProperty("name").GetString(),
+                                candidate.GetProperty("party").GetString(),
                                 candidate.GetProperty("region").GetString(),
                                 candidate.GetProperty("age").GetInt32(),
-                                candidate.GetProperty("email").GetString(),
-                                status,
-                                candidate.GetProperty("applicationDate").GetDateTime().ToString("yyyy-MM-dd")
+                                //candidate.GetProperty("email")?.GetString() ?? "",
+                                0, // Votes - not available in this endpoint
+                                "✅ Approved",
+                                DateTime.Now.ToString("yyyy-MM-dd")
                             );
+                        }
+                    }
+                    else
+                    {
+                        // Other endpoints return {success: true, candidates: [...]}
+                        var result = JsonSerializer.Deserialize<JsonElement>(responseString);
+
+                        if (result.TryGetProperty("candidates", out var candidatesArray))
+                        {
+                            foreach (var candidate in candidatesArray.EnumerateArray())
+                            {
+                                string status = candidate.GetProperty("isApproved").GetBoolean()
+                                    ? "✅ Approved"
+                                    : candidate.TryGetProperty("status", out var statusProp)
+                                        ? statusProp.GetString() == "Rejected" ? "❌ Rejected" : "⏳ Pending"
+                                        : "⏳ Pending";
+
+                                dgv.Rows.Add(
+                                    candidate.GetProperty("id").GetInt32(),
+                                    candidate.GetProperty("fullName").GetString(),
+                                    candidate.GetProperty("partyAffiliation").GetString(),
+                                    candidate.GetProperty("region").GetString(),
+                                    candidate.GetProperty("age").GetInt32(),
+                                    candidate.GetProperty("email").GetString(),
+                                    candidate.TryGetProperty("votesReceived", out var votes) ? votes.GetInt32() : 0,
+                                    status,
+                                    candidate.GetProperty("applicationDate").GetDateTime().ToString("yyyy-MM-dd")
+                                );
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
+                MessageBox.Show($"Error loading candidates: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
+                dgv.ResumeLayout();
                 Cursor = Cursors.Default;
             }
         }
@@ -684,37 +918,42 @@ namespace Election.UI.Forms
         {
             try
             {
+                dgv.SuspendLayout();
                 dgv.Rows.Clear();
                 Cursor = Cursors.WaitCursor;
 
-                var response = await _client.GetAsync("api/admin/voters");
+                // ✅ FIXED: Use detailed voters endpoint
+                var response = await _client.GetAsync("api/admin/voters-detailed");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    var voters = result.GetProperty("voters");
-
-                    foreach (var voter in voters.EnumerateArray())
+                    if (result.TryGetProperty("voters", out var voters))
                     {
-                        dgv.Rows.Add(
-                            voter.GetProperty("id").GetInt32(),
-                            voter.GetProperty("username").GetString(),
-                            voter.GetProperty("email").GetString(),
-                            voter.GetProperty("role").GetString(),
-                            voter.GetProperty("region").GetString(),
-                            voter.GetProperty("registeredDate").GetDateTime().ToString("yyyy-MM-dd"),
-                            voter.GetProperty("isCandidate").GetBoolean() ? "Yes" : "No"
-                        );
+                        foreach (var voter in voters.EnumerateArray())
+                        {
+                            dgv.Rows.Add(
+                                voter.GetProperty("id").GetInt32(),
+                                voter.GetProperty("username").GetString(),
+                                voter.GetProperty("email").GetString(),
+                                voter.GetProperty("role").GetString(),
+                                voter.GetProperty("region").GetString(),
+                                voter.GetProperty("hasVoted").GetBoolean() ? "✅ Voted" : "❌ Not Voted",
+                                voter.GetProperty("registeredDate").GetDateTime().ToString("yyyy-MM-dd"),
+                                voter.GetProperty("isCandidate").GetBoolean() ? "Yes" : "No"
+                            );
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
+                MessageBox.Show($"Error loading voters: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
+                dgv.ResumeLayout();
                 Cursor = Cursors.Default;
             }
         }
@@ -736,6 +975,21 @@ namespace Election.UI.Forms
                 else if (status == "⏳ Pending")
                 {
                     e.CellStyle.ForeColor = Color.Orange;
+                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                }
+                else if (status == "❌ Rejected")
+                {
+                    e.CellStyle.ForeColor = Color.Red;
+                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                }
+            }
+
+            // Format Votes column
+            if (dgv.Columns[e.ColumnIndex].Name == "Votes" && e.Value != null)
+            {
+                if (int.TryParse(e.Value.ToString(), out int votes))
+                {
+                    e.CellStyle.ForeColor = votes > 0 ? Color.Blue : Color.Gray;
                     e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
                 }
             }
@@ -779,6 +1033,9 @@ namespace Election.UI.Forms
                             detailsForm.Text = $"Candidate Details: {candidateName}";
                             detailsForm.Size = new Size(500, 400);
                             detailsForm.StartPosition = FormStartPosition.CenterParent;
+                            detailsForm.MaximizeBox = true;
+                            detailsForm.MinimizeBox = true;
+                            detailsForm.FormBorderStyle = FormBorderStyle.Sizable;
 
                             TextBox txtDetails = new TextBox
                             {
@@ -893,10 +1150,15 @@ Age:          {candidate.GetProperty("age").GetInt32()}
 Region:       {candidate.GetProperty("region").GetString()}
 Party:        {candidate.GetProperty("partyAffiliation").GetString()}
 Email:        {candidate.GetProperty("email").GetString()}
+Phone:        {candidate.GetProperty("phone").GetString()}
 Status:       {candidate.GetProperty("status").GetString()}
 Approved:     {(candidate.GetProperty("isApproved").GetBoolean() ? "Yes" : "No")}
+Rejected:     {(candidate.TryGetProperty("isRejected", out var rejected) ? rejected.GetBoolean() : false ? "Yes" : "No")}
+Votes:        {(candidate.TryGetProperty("votesReceived", out var votes) ? votes.GetInt32() : 0)}
 Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd HH:mm}
-────────────────────────────";
+────────────────────────────
+Admin Remarks:
+{candidate.GetProperty("adminRemarks").GetString()}";
             }
             catch
             {
@@ -919,23 +1181,25 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             Panel searchPanel = new Panel
             {
                 Location = new Point(20, 20),
-                Size = new Size(1050, 60),
+                Size = new Size(pnlMainContent.Width - 60, 60),
                 BackColor = Color.FromArgb(245, 245, 245),
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             TextBox txtSearch = new TextBox
             {
                 PlaceholderText = "Search voters by name, email, or region...",
                 Location = new Point(20, 15),
-                Size = new Size(700, 30),
-                Font = new Font("Segoe UI", 11)
+                Size = new Size(pnlMainContent.Width - 200, 30),
+                Font = new Font("Segoe UI", 11),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             Button btnSearch = new Button
             {
                 Text = "🔍 Search",
-                Location = new Point(740, 15),
+                Location = new Point(pnlMainContent.Width - 170, 15),
                 Size = new Size(100, 30),
                 BackColor = Color.DodgerBlue,
                 ForeColor = Color.White,
@@ -946,7 +1210,7 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             Button btnExport = new Button
             {
                 Text = "📥 Export CSV",
-                Location = new Point(850, 15),
+                Location = new Point(pnlMainContent.Width - 60, 15),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(46, 125, 50),
                 ForeColor = Color.White,
@@ -961,23 +1225,26 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             {
                 Name = "dgvVoters",
                 Location = new Point(20, 100),
-                Size = new Size(1050, 400),
+                Size = new Size(pnlMainContent.Width - 60, pnlMainContent.Height - 150),
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 ReadOnly = true,
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
             // Add columns
             dgvVoters.Columns.Add("Id", "ID");
+            dgvVoters.Columns.Add("FullName", "Full Name");
             dgvVoters.Columns.Add("Username", "Username");
             dgvVoters.Columns.Add("Email", "Email");
-            dgvVoters.Columns.Add("Role", "Role");
             dgvVoters.Columns.Add("Region", "Region");
-            dgvVoters.Columns.Add("RegisteredDate", "Registered");
+            dgvVoters.Columns.Add("Age", "Age");
+            dgvVoters.Columns.Add("HasVoted", "Voting Status");
+            dgvVoters.Columns.Add("RegisteredDate", "Registered Date");
             dgvVoters.Columns.Add("IsCandidate", "Candidate?");
 
             // Action buttons column
@@ -994,6 +1261,7 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             btnSearch.Click += async (s, e) => await LoadVotersAsync(dgvVoters, txtSearch.Text);
             btnExport.Click += (s, e) => ExportVotersToCSV(dgvVoters);
             dgvVoters.CellClick += DgvVoters_CellClick;
+            dgvVoters.CellFormatting += DgvVoters_CellFormatting;
 
             mainPanel.Controls.Add(searchPanel);
             mainPanel.Controls.Add(dgvVoters);
@@ -1010,36 +1278,42 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
                 dgv.Rows.Clear();
                 Cursor = Cursors.WaitCursor;
 
-                var response = await _client.GetAsync("api/admin/voters");
+                // ✅ FIXED: Use detailed voters endpoint
+                var response = await _client.GetAsync("api/admin/voters-detailed");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    var voters = result.GetProperty("voters");
-
-                    foreach (var voter in voters.EnumerateArray())
+                    if (result.TryGetProperty("voters", out var voters))
                     {
-                        if (!string.IsNullOrEmpty(search))
+                        foreach (var voter in voters.EnumerateArray())
                         {
-                            string username = voter.GetProperty("username").GetString()?.ToLower() ?? "";
-                            string email = voter.GetProperty("email").GetString()?.ToLower() ?? "";
-                            string region = voter.GetProperty("region").GetString()?.ToLower() ?? "";
+                            if (!string.IsNullOrEmpty(search))
+                            {
+                                string username = voter.GetProperty("username").GetString()?.ToLower() ?? "";
+                                string email = voter.GetProperty("email").GetString()?.ToLower() ?? "";
+                                string region = voter.GetProperty("region").GetString()?.ToLower() ?? "";
+                                string fullName = voter.GetProperty("fullName").GetString()?.ToLower() ?? "";
 
-                            if (!username.Contains(search.ToLower()) &&
-                                !email.Contains(search.ToLower()) &&
-                                !region.Contains(search.ToLower()))
-                                continue;
+                                if (!username.Contains(search.ToLower()) &&
+                                    !email.Contains(search.ToLower()) &&
+                                    !region.Contains(search.ToLower()) &&
+                                    !fullName.Contains(search.ToLower()))
+                                    continue;
+                            }
+
+                            dgv.Rows.Add(
+                                voter.GetProperty("id").GetInt32(),
+                                voter.GetProperty("fullName").GetString(),
+                                voter.GetProperty("username").GetString(),
+                                voter.GetProperty("email").GetString(),
+                                voter.GetProperty("region").GetString(),
+                                voter.GetProperty("age").GetInt32(),
+                                voter.GetProperty("hasVoted").GetBoolean() ? "✅ Voted" : "❌ Not Voted",
+                                voter.GetProperty("registeredDate").GetDateTime().ToString("yyyy-MM-dd"),
+                                voter.GetProperty("isCandidate").GetBoolean() ? "Yes" : "No"
+                            );
                         }
-
-                        dgv.Rows.Add(
-                            voter.GetProperty("id").GetInt32(),
-                            voter.GetProperty("username").GetString(),
-                            voter.GetProperty("email").GetString(),
-                            voter.GetProperty("role").GetString(),
-                            voter.GetProperty("region").GetString(),
-                            voter.GetProperty("registeredDate").GetDateTime().ToString("yyyy-MM-dd"),
-                            voter.GetProperty("isCandidate").GetBoolean() ? "Yes" : "No"
-                        );
                     }
                 }
             }
@@ -1054,9 +1328,32 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             }
         }
 
+        private void DgvVoters_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            DataGridView dgv = (DataGridView)sender;
+
+            // Format HasVoted column
+            if (dgv.Columns[e.ColumnIndex].Name == "HasVoted" && e.Value != null)
+            {
+                string status = e.Value.ToString();
+                if (status == "✅ Voted")
+                {
+                    e.CellStyle.ForeColor = Color.Green;
+                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                }
+                else if (status == "❌ Not Voted")
+                {
+                    e.CellStyle.ForeColor = Color.Red;
+                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                }
+            }
+        }
+
         private void DgvVoters_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0 || e.ColumnIndex != 7) return; // Actions column
+            if (e.RowIndex < 0 || e.ColumnIndex != 9) return; // Actions column
 
             DataGridView dgv = (DataGridView)sender;
             int userId = Convert.ToInt32(dgv.Rows[e.RowIndex].Cells["Id"].Value);
@@ -1072,6 +1369,9 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             ToolStripMenuItem viewItem = new ToolStripMenuItem("👁️ View Details");
             viewItem.Click += (s, e) => ViewVoterDetails(userId, username);
 
+            ToolStripMenuItem toggleVoteItem = new ToolStripMenuItem("🗳️ Toggle Voting Status");
+            toggleVoteItem.Click += async (s, e) => await ToggleVoterVotingStatus(userId, username);
+
             ToolStripMenuItem disableItem = new ToolStripMenuItem("⏸️ Disable Account");
             disableItem.Click += (s, e) => DisableVoterAccount(userId, username);
 
@@ -1079,11 +1379,37 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             deleteItem.Click += (s, e) => DeleteVoterAccount(userId, username);
 
             menu.Items.Add(viewItem);
-            menu.Items.Add(disableItem);
+            menu.Items.Add(toggleVoteItem);
             menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(disableItem);
             menu.Items.Add(deleteItem);
 
             menu.Show(Cursor.Position);
+        }
+
+        private async Task ToggleVoterVotingStatus(int userId, string username)
+        {
+            try
+            {
+                var response = await _client.PutAsync($"api/admin/toggle-voter-status/{userId}", null);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                    var message = result.GetProperty("message").GetString();
+
+                    MessageBox.Show(message, "Success",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Refresh voter list
+                    await LoadVotersAsync((DataGridView)pnlMainContent.Controls[0].Controls[1], "");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void ViewVoterDetails(int userId, string username)
@@ -1161,12 +1487,13 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             {
                 Name = "dgvResults",
                 Location = new Point(20, 120),
-                Size = new Size(1050, 350),
+                Size = new Size(pnlMainContent.Width - 60, pnlMainContent.Height - 200),
                 ReadOnly = true,
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
             // Add columns
@@ -1181,8 +1508,9 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             // Action buttons
             Panel buttonPanel = new Panel
             {
-                Location = new Point(20, 490),
-                Size = new Size(1050, 60)
+                Location = new Point(20, pnlMainContent.Height - 70),
+                Size = new Size(pnlMainContent.Width - 60, 60),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
             Button btnRefreshResults = new Button
@@ -1260,33 +1588,36 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
                     lblStatus.ForeColor = Color.Green;
                 }
 
-                // Load results (placeholder - you need to implement voting system)
+                // ✅ FIXED: Use real election results endpoint
                 var response = await _client.GetAsync("api/admin/election-results");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    var results = result.GetProperty("results");
 
-                    int position = 1;
-                    foreach (var candidate in results.EnumerateArray())
+                    if (result.TryGetProperty("results", out var resultsArray))
                     {
-                        dgv.Rows.Add(
-                            position++,
-                            candidate.GetProperty("fullName").GetString(),
-                            candidate.GetProperty("partyAffiliation").GetString(),
-                            candidate.GetProperty("region").GetString(),
-                            candidate.GetProperty("votes").GetInt32(),
-                            $"{candidate.GetProperty("percentage").GetInt32()}%",
-                            position == 2 ? "🏆 LEADING" : "RUNNING"
-                        );
-                    }
+                        int position = 1;
+                        foreach (var candidate in resultsArray.EnumerateArray())
+                        {
+                            dgv.Rows.Add(
+                                position,
+                                candidate.GetProperty("fullName").GetString(),
+                                candidate.GetProperty("partyAffiliation").GetString(),
+                                candidate.GetProperty("region").GetString(),
+                                candidate.GetProperty("votes").GetInt32(),
+                                $"{candidate.GetProperty("percentage").GetDouble():0.00}%",
+                                position == 1 ? "🏆 WINNER" : "RUNNING"
+                            );
+                            position++;
+                        }
 
-                    // Highlight winner
-                    if (dgv.Rows.Count > 0)
-                    {
-                        dgv.Rows[0].DefaultCellStyle.BackColor = Color.FromArgb(255, 255, 200);
-                        dgv.Rows[0].DefaultCellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                        // Highlight winner
+                        if (dgv.Rows.Count > 0)
+                        {
+                            dgv.Rows[0].DefaultCellStyle.BackColor = Color.FromArgb(255, 255, 200);
+                            dgv.Rows[0].DefaultCellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                        }
                     }
                 }
             }
@@ -1336,10 +1667,11 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             Panel statusPanel = new Panel
             {
                 Location = new Point(20, 20),
-                Size = new Size(1050, 100),
+                Size = new Size(pnlMainContent.Width - 60, 100),
                 BackColor = Color.FromArgb(240, 245, 255),
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(15)
+                Padding = new Padding(15),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             Label lblStatusTitle = new Label
@@ -1378,8 +1710,9 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             Panel controlPanel = new Panel
             {
                 Location = new Point(20, 140),
-                Size = new Size(1050, 120),
-                BackColor = Color.White
+                Size = new Size(pnlMainContent.Width - 60, 120),
+                BackColor = Color.White,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             Button btnStartElection = new Button
@@ -1452,10 +1785,11 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             Panel settingsPanel = new Panel
             {
                 Location = new Point(20, 280),
-                Size = new Size(1050, 200),
+                Size = new Size(pnlMainContent.Width - 60, 200),
                 BackColor = Color.FromArgb(250, 250, 250),
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(15)
+                Padding = new Padding(15),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             Label lblSettingsTitle = new Label
@@ -1692,7 +2026,7 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             catch (Exception ex)
             {
                 MessageBox.Show($"Error: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
@@ -1721,5 +2055,6 @@ Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd
             }
         }
         #endregion
+
     }
 }

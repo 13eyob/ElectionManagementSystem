@@ -76,11 +76,12 @@
             // 
             // lnkMyProfile
             // 
+            lnkMyProfile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkMyProfile.ActiveLinkColor = Color.DarkBlue;
             lnkMyProfile.AutoSize = true;
             lnkMyProfile.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lnkMyProfile.LinkColor = Color.White;
-            lnkMyProfile.Location = new Point(919, 45);
+            lnkMyProfile.Location = new Point(991, 45);
             lnkMyProfile.Name = "lnkMyProfile";
             lnkMyProfile.Size = new Size(89, 21);
             lnkMyProfile.TabIndex = 5;
@@ -89,11 +90,12 @@
             // 
             // lnkHome
             // 
+            lnkHome.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkHome.ActiveLinkColor = Color.DarkBlue;
             lnkHome.AutoSize = true;
             lnkHome.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lnkHome.LinkColor = Color.White;
-            lnkHome.Location = new Point(816, 43);
+            lnkHome.Location = new Point(888, 43);
             lnkHome.Name = "lnkHome";
             lnkHome.Size = new Size(56, 21);
             lnkHome.TabIndex = 4;
@@ -102,18 +104,20 @@
             // 
             // btnLogout
             // 
+            btnLogout.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnLogout.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnLogout.ForeColor = Color.Red;
-            btnLogout.Location = new Point(1144, 28);
+            btnLogout.Location = new Point(1116, 28);
             btnLogout.Margin = new Padding(4);
             btnLogout.Name = "btnLogout";
             btnLogout.Size = new Size(123, 36);
             btnLogout.TabIndex = 3;
-            btnLogout.Text = "Lgout";
+            btnLogout.Text = "Logout";
             btnLogout.UseVisualStyleBackColor = true;
             // 
             // lblSystemTitle
             // 
+            lblSystemTitle.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             lblSystemTitle.AutoSize = true;
             lblSystemTitle.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblSystemTitle.ForeColor = Color.White;
@@ -126,6 +130,7 @@
             // 
             // picLogo
             // 
+            picLogo.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             picLogo.BackgroundImage = Properties.Resources._13;
             picLogo.BackgroundImageLayout = ImageLayout.Zoom;
             picLogo.Location = new Point(15, 17);
@@ -139,7 +144,7 @@
             // 
             lblMainTitle.AutoSize = true;
             lblMainTitle.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblMainTitle.Location = new Point(87, 20);
+            lblMainTitle.Location = new Point(287, 20);
             lblMainTitle.Name = "lblMainTitle";
             lblMainTitle.Size = new Size(361, 25);
             lblMainTitle.TabIndex = 0;
@@ -149,7 +154,7 @@
             // 
             lblStep1.AutoSize = true;
             lblStep1.Font = new Font("Segoe UI Semibold", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblStep1.Location = new Point(87, 92);
+            lblStep1.Location = new Point(287, 92);
             lblStep1.Name = "lblStep1";
             lblStep1.Size = new Size(166, 25);
             lblStep1.TabIndex = 1;
@@ -157,7 +162,7 @@
             // 
             // txtFullName
             // 
-            txtFullName.Location = new Point(88, 147);
+            txtFullName.Location = new Point(288, 147);
             txtFullName.Multiline = true;
             txtFullName.Name = "txtFullName";
             txtFullName.PlaceholderText = "FullName";
@@ -166,7 +171,7 @@
             // 
             // txtAge
             // 
-            txtAge.Location = new Point(87, 201);
+            txtAge.Location = new Point(287, 201);
             txtAge.Multiline = true;
             txtAge.Name = "txtAge";
             txtAge.PlaceholderText = "Age";
@@ -175,7 +180,7 @@
             // 
             // textRegion
             // 
-            textRegion.Location = new Point(87, 253);
+            textRegion.Location = new Point(287, 253);
             textRegion.Multiline = true;
             textRegion.Name = "textRegion";
             textRegion.PlaceholderText = "Region";
@@ -186,7 +191,7 @@
             // 
             lblStep2.AutoSize = true;
             lblStep2.Font = new Font("Segoe UI Semibold", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblStep2.Location = new Point(87, 319);
+            lblStep2.Location = new Point(287, 319);
             lblStep2.Name = "lblStep2";
             lblStep2.Size = new Size(181, 25);
             lblStep2.TabIndex = 8;
@@ -203,9 +208,10 @@
             // 
             // lblUploadPhoto
             // 
+            lblUploadPhoto.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblUploadPhoto.AutoSize = true;
             lblUploadPhoto.Font = new Font("Segoe UI Semibold", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblUploadPhoto.Location = new Point(831, 319);
+            lblUploadPhoto.Location = new Point(731, 319);
             lblUploadPhoto.Name = "lblUploadPhoto";
             lblUploadPhoto.Size = new Size(129, 25);
             lblUploadPhoto.TabIndex = 10;
@@ -213,6 +219,7 @@
             // 
             // pnlMain
             // 
+            pnlMain.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             pnlMain.Controls.Add(btnSubmit);
             pnlMain.Controls.Add(btnChooseImage);
             pnlMain.Controls.Add(picPhoto);
@@ -238,6 +245,7 @@
             // 
             // btnSubmit
             // 
+            btnSubmit.Anchor = AnchorStyles.Bottom;
             btnSubmit.BackColor = SystemColors.Highlight;
             btnSubmit.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnSubmit.ForeColor = Color.White;
@@ -250,9 +258,10 @@
             // 
             // btnChooseImage
             // 
+            btnChooseImage.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnChooseImage.BackColor = SystemColors.Highlight;
             btnChooseImage.ForeColor = Color.White;
-            btnChooseImage.Location = new Point(849, 516);
+            btnChooseImage.Location = new Point(749, 560);
             btnChooseImage.Name = "btnChooseImage";
             btnChooseImage.Size = new Size(148, 38);
             btnChooseImage.TabIndex = 18;
@@ -261,17 +270,22 @@
             // 
             // picPhoto
             // 
-            picPhoto.Location = new Point(849, 391);
+            picPhoto.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            picPhoto.BackColor = Color.White;
+            picPhoto.BorderStyle = BorderStyle.FixedSingle;
+            picPhoto.Location = new Point(749, 391);
             picPhoto.Name = "picPhoto";
             picPhoto.Size = new Size(148, 163);
+            picPhoto.SizeMode = PictureBoxSizeMode.Zoom;
             picPhoto.TabIndex = 17;
             picPhoto.TabStop = false;
             // 
             // picCameraIcon
             // 
+            picCameraIcon.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             picCameraIcon.BackgroundImage = Properties.Resources.image_icon;
             picCameraIcon.BackgroundImageLayout = ImageLayout.Stretch;
-            picCameraIcon.Location = new Point(754, 319);
+            picCameraIcon.Location = new Point(654, 319);
             picCameraIcon.Name = "picCameraIcon";
             picCameraIcon.Size = new Size(71, 50);
             picCameraIcon.TabIndex = 16;
@@ -279,9 +293,10 @@
             // 
             // btnUploadFile
             // 
+            btnUploadFile.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btnUploadFile.BackColor = Color.White;
             btnUploadFile.ForeColor = Color.DeepSkyBlue;
-            btnUploadFile.Location = new Point(384, 516);
+            btnUploadFile.Location = new Point(584, 560);
             btnUploadFile.Name = "btnUploadFile";
             btnUploadFile.Size = new Size(134, 38);
             btnUploadFile.TabIndex = 15;
@@ -290,7 +305,8 @@
             // 
             // txtManifesto
             // 
-            txtManifesto.Location = new Point(53, 363);
+            txtManifesto.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            txtManifesto.Location = new Point(253, 363);
             txtManifesto.Multiline = true;
             txtManifesto.Name = "txtManifesto";
             txtManifesto.Size = new Size(465, 191);
@@ -298,7 +314,8 @@
             // 
             // textPhone
             // 
-            textPhone.Location = new Point(562, 262);
+            textPhone.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            textPhone.Location = new Point(462, 262);
             textPhone.Multiline = true;
             textPhone.Name = "textPhone";
             textPhone.PlaceholderText = "Phone";
@@ -307,7 +324,8 @@
             // 
             // textEmail
             // 
-            textEmail.Location = new Point(562, 201);
+            textEmail.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            textEmail.Location = new Point(462, 201);
             textEmail.Multiline = true;
             textEmail.Name = "textEmail";
             textEmail.PlaceholderText = "Email";
@@ -316,7 +334,8 @@
             // 
             // textparty
             // 
-            textparty.Location = new Point(562, 147);
+            textparty.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            textparty.Location = new Point(462, 147);
             textparty.Multiline = true;
             textparty.Name = "textparty";
             textparty.PlaceholderText = "party/Affilation";
@@ -334,7 +353,8 @@
             Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             Margin = new Padding(4);
             Name = "frmCandidateApplication";
-            Text = "frmCandidateApplication";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Candidate Application - Election System";
             Load += frmCandidateApplication_Load;
             pnlHeader.ResumeLayout(false);
             pnlHeader.PerformLayout();

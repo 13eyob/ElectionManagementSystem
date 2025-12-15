@@ -75,13 +75,13 @@
             // 
             // pnlHeader
             // 
+            pnlHeader.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             pnlHeader.BackColor = Color.FromArgb(15, 22, 40);
             pnlHeader.Controls.Add(lnkMyProfile);
             pnlHeader.Controls.Add(lnkHome);
             pnlHeader.Controls.Add(btnLogout);
             pnlHeader.Controls.Add(lblSystemTitle);
             pnlHeader.Controls.Add(picLogo);
-            pnlHeader.Dock = DockStyle.Top;
             pnlHeader.Location = new Point(0, 0);
             pnlHeader.Margin = new Padding(4);
             pnlHeader.Name = "pnlHeader";
@@ -90,11 +90,12 @@
             // 
             // lnkMyProfile
             // 
+            lnkMyProfile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkMyProfile.ActiveLinkColor = Color.DarkBlue;
             lnkMyProfile.AutoSize = true;
             lnkMyProfile.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lnkMyProfile.LinkColor = Color.White;
-            lnkMyProfile.Location = new Point(919, 45);
+            lnkMyProfile.Location = new Point(1086, 45);
             lnkMyProfile.Name = "lnkMyProfile";
             lnkMyProfile.Size = new Size(89, 21);
             lnkMyProfile.TabIndex = 5;
@@ -103,11 +104,12 @@
             // 
             // lnkHome
             // 
+            lnkHome.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkHome.ActiveLinkColor = Color.DarkBlue;
             lnkHome.AutoSize = true;
             lnkHome.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lnkHome.LinkColor = Color.White;
-            lnkHome.Location = new Point(816, 43);
+            lnkHome.Location = new Point(983, 43);
             lnkHome.Name = "lnkHome";
             lnkHome.Size = new Size(56, 21);
             lnkHome.TabIndex = 4;
@@ -116,9 +118,10 @@
             // 
             // btnLogout
             // 
+            btnLogout.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnLogout.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnLogout.ForeColor = Color.Red;
-            btnLogout.Location = new Point(1144, 28);
+            btnLogout.Location = new Point(1211, 28);
             btnLogout.Margin = new Padding(4);
             btnLogout.Name = "btnLogout";
             btnLogout.Size = new Size(123, 36);
@@ -128,6 +131,7 @@
             // 
             // lblSystemTitle
             // 
+            lblSystemTitle.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             lblSystemTitle.AutoSize = true;
             lblSystemTitle.Font = new Font("Segoe UI Semibold", 15.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lblSystemTitle.ForeColor = Color.White;
@@ -140,6 +144,7 @@
             // 
             // picLogo
             // 
+            picLogo.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             picLogo.BackgroundImage = Properties.Resources._13;
             picLogo.BackgroundImageLayout = ImageLayout.Zoom;
             picLogo.Location = new Point(13, 17);
@@ -151,6 +156,7 @@
             // 
             // panel1
             // 
+            panel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             panel1.BackColor = Color.FromArgb(15, 22, 40);
             panel1.Controls.Add(panelstart);
             panel1.Controls.Add(panelresult);
@@ -158,7 +164,6 @@
             panel1.Controls.Add(panelcandidate);
             panel1.Controls.Add(panelvoters);
             panel1.Controls.Add(panelhome);
-            panel1.Dock = DockStyle.Left;
             panel1.Location = new Point(0, 75);
             panel1.Name = "panel1";
             panel1.Size = new Size(162, 659);
@@ -236,12 +241,13 @@
             // 
             // button1
             // 
+            button1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button1.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             button1.ForeColor = Color.Red;
-            button1.Location = new Point(1, 589);
+            button1.Location = new Point(0, 612);
             button1.Margin = new Padding(4);
             button1.Name = "button1";
-            button1.Size = new Size(158, 47);
+            button1.Size = new Size(162, 47);
             button1.TabIndex = 4;
             button1.Text = "Logout";
             button1.UseVisualStyleBackColor = true;
@@ -353,6 +359,7 @@
             // 
             // labeladmin
             // 
+            labeladmin.Anchor = AnchorStyles.Top;
             labeladmin.AutoSize = true;
             labeladmin.BackColor = Color.SlateGray;
             labeladmin.Font = new Font("Times New Roman", 18F, FontStyle.Bold, GraphicsUnit.Point, 0);
@@ -365,6 +372,7 @@
             // 
             // pnlMainContent
             // 
+            pnlMainContent.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             pnlMainContent.BackColor = Color.White;
             pnlMainContent.Controls.Add(btnRefresh);
             pnlMainContent.Controls.Add(lblCandidatesTitle);
@@ -376,6 +384,7 @@
             // 
             // btnRefresh
             // 
+            btnRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnRefresh.BackColor = Color.DodgerBlue;
             btnRefresh.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnRefresh.ForeColor = Color.White;
@@ -399,6 +408,7 @@
             // 
             // dgvCandidates
             // 
+            dgvCandidates.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvCandidates.AllowUserToAddRows = false;
             dgvCandidates.AllowUserToDeleteRows = false;
             dgvCandidates.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
@@ -423,6 +433,13 @@
             Controls.Add(labeladmin);
             Controls.Add(panel1);
             Controls.Add(pnlHeader);
+
+            // Form properties for maximize/minimize/resize
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
+            MinimizeBox = true;
+            MinimumSize = new Size(900, 600);
+
             Name = "frmAdminDashboard";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Admin Dashboard - Election System";
@@ -435,7 +452,7 @@
             ((System.ComponentModel.ISupportInitialize)pictureBox5).EndInit();
             panelresult.ResumeLayout(false);
             panelresult.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox4).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox4).EndInit();
             panelcandidate.ResumeLayout(false);
             panelcandidate.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox3).EndInit();

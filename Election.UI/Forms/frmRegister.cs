@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Windows.Forms;
@@ -22,12 +23,28 @@ namespace Election.UI.Forms
             // SAME PORT AS frmLogin
             _client.BaseAddress = new Uri("https://localhost:7208");
 
+            // 🔥 ADDED: Center panel events
+            this.Load += (s, e) => CenterRegisterPanel();
+            this.Resize += (s, e) => CenterRegisterPanel();
+
             // Set defaults
             rbVoter.Checked = true;
             numAge.Value = 18;
 
             // Initialize ComboBox with Ethiopian regions
             InitializeRegionComboBox();
+        }
+
+        /// <summary>
+        /// 🔥 ADDED: Centers the registration panel both horizontally and vertically
+        /// </summary>
+        private void CenterRegisterPanel()
+        {
+            if (panel1 != null && this.ClientSize.Width > 0 && this.ClientSize.Height > 0)
+            {
+                panel1.Left = (this.ClientSize.Width - panel1.Width) / 2;
+                panel1.Top = (this.ClientSize.Height - panel1.Height) / 2;
+            }
         }
 
         private void InitializeRegionComboBox()

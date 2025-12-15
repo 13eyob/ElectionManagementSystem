@@ -25,6 +25,9 @@ namespace Election.UI.Forms
         {
             InitializeComponent();
 
+            // 🔥 FIXED: Changed to DockStyle.Fill for proper resizing
+            pnlMain.Dock = DockStyle.Fill;
+
             _client = new HttpClient
             {
                 BaseAddress = new Uri("https://localhost:7208"),

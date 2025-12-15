@@ -26,8 +26,26 @@ namespace Election.UI.Forms
             InitializeComponent();
             _client.BaseAddress = new Uri("https://localhost:7208");
 
+            // 🔥 ADDED: Center the panel when form loads initially
+            this.Load += (s, e) => CenterLoginPanel();
+
+            // 🔥 ADDED: Center the panel when form resizes
+            this.Resize += (s, e) => CenterLoginPanel();
+
             // 🔥 MANUALLY CONNECT ALL EVENT HANDLERS
             ConnectAllEventHandlers();
+        }
+
+        /// <summary>
+        /// 🔥 ADDED: Centers the login panel both horizontally and vertically
+        /// </summary>
+        private void CenterLoginPanel()
+        {
+            if (pnllogin != null && this.ClientSize.Width > 0 && this.ClientSize.Height > 0)
+            {
+                pnllogin.Left = (this.ClientSize.Width - pnllogin.Width) / 2;
+                pnllogin.Top = (this.ClientSize.Height - pnllogin.Height) / 2;
+            }
         }
 
         /// <summary>
@@ -35,7 +53,7 @@ namespace Election.UI.Forms
         /// </summary>
         private void ConnectAllEventHandlers()
         {
-            // Form Load event
+            // Form Load event (already handled above, but keeping for compatibility)
             this.Load += frmLogin_Load;
 
             // Username field events
@@ -69,6 +87,9 @@ namespace Election.UI.Forms
 
             // Set focus to username field
             txtUsername.Focus();
+
+            // 🔥 ADDED: Center panel on load (already handled but calling again for safety)
+            CenterLoginPanel();
         }
 
         /// <summary>
