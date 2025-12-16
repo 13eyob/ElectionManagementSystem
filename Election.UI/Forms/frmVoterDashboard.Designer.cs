@@ -1,5 +1,4 @@
-﻿// Location: Election.UI/Forms/frmVoterDashboard.Designer.cs
-namespace Election.UI.Forms
+﻿namespace Election.UI.Forms
 {
     partial class frmVoterDashboard
     {
@@ -29,200 +28,124 @@ namespace Election.UI.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            lblTitle = new Label();
-            panelContainer = new Panel();
-            flowCandidates = new FlowLayoutPanel();
-            pnlSelection = new Panel();
-            panelButtons = new Panel();
-            btnCancel = new Button();
+            panel1 = new Panel();
+            btnLogout = new Button();
+            lblSystemTitle = new Label();
+            picLogo = new PictureBox();
+            panel2 = new Panel();
+            label1 = new Label();
             btnSubmit = new Button();
-            lblSelectedCandidate = new Label();
-            statusBar = new Panel();
-            lblVoterId = new Label();
-            lblConnectionStatus = new Label();
-            panelContainer.SuspendLayout();
-            pnlSelection.SuspendLayout();
-            panelButtons.SuspendLayout();
-            statusBar.SuspendLayout();
+            panel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)picLogo).BeginInit();
+            panel2.SuspendLayout();
             SuspendLayout();
             // 
-            // lblTitle
+            // panel1
             // 
-            lblTitle.BackColor = Color.White;
-            lblTitle.Dock = DockStyle.Top;
-            lblTitle.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
-            lblTitle.ForeColor = Color.FromArgb(44, 62, 80);
-            lblTitle.Location = new Point(0, 0);
-            lblTitle.Name = "lblTitle";
-            lblTitle.Padding = new Padding(0, 20, 0, 20);
-            lblTitle.Size = new Size(900, 100);
-            lblTitle.TabIndex = 0;
-            lblTitle.Text = "Select Your Candidate";
-            lblTitle.TextAlign = ContentAlignment.MiddleCenter;
+            panel1.BackColor = Color.FromArgb(15, 22, 40);
+            panel1.Controls.Add(btnLogout);
+            panel1.Controls.Add(lblSystemTitle);
+            panel1.Controls.Add(picLogo);
+            panel1.Dock = DockStyle.Top;
+            panel1.Location = new Point(0, 0);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(1302, 76);
+            panel1.TabIndex = 0;
             // 
-            // panelContainer
+            // btnLogout
             // 
-            panelContainer.AutoScroll = true;
-            panelContainer.BackColor = Color.White;
-            panelContainer.Controls.Add(flowCandidates);
-            panelContainer.Dock = DockStyle.Fill;
-            panelContainer.Location = new Point(0, 100);
-            panelContainer.Name = "panelContainer";
-            panelContainer.Padding = new Padding(40, 20, 40, 20);
-            panelContainer.Size = new Size(900, 380);
-            panelContainer.TabIndex = 1;
+            btnLogout.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnLogout.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnLogout.ForeColor = Color.Red;
+            btnLogout.Location = new Point(1175, 36);
+            btnLogout.Margin = new Padding(4);
+            btnLogout.Name = "btnLogout";
+            btnLogout.Size = new Size(123, 36);
+            btnLogout.TabIndex = 4;
+            btnLogout.Text = "Logout";
+            btnLogout.UseVisualStyleBackColor = true;
             // 
-            // flowCandidates
+            // lblSystemTitle
             // 
-            flowCandidates.AutoScroll = true;
-            flowCandidates.BackColor = Color.White;
-            flowCandidates.Dock = DockStyle.Fill;
-            flowCandidates.FlowDirection = FlowDirection.TopDown;
-            flowCandidates.Location = new Point(40, 20);
-            flowCandidates.Name = "flowCandidates";
-            flowCandidates.Padding = new Padding(0, 0, 20, 0);
-            flowCandidates.Size = new Size(820, 340);
-            flowCandidates.TabIndex = 0;
-            flowCandidates.WrapContents = false;
-            flowCandidates.Paint += flowCandidates_Paint;
+            lblSystemTitle.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            lblSystemTitle.AutoSize = true;
+            lblSystemTitle.Font = new Font("Segoe UI Semibold", 15.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblSystemTitle.ForeColor = Color.White;
+            lblSystemTitle.Location = new Point(80, 15);
+            lblSystemTitle.Margin = new Padding(4, 0, 4, 0);
+            lblSystemTitle.Name = "lblSystemTitle";
+            lblSystemTitle.Size = new Size(339, 30);
+            lblSystemTitle.TabIndex = 2;
+            lblSystemTitle.Text = "ETH Election Management System";
             // 
-            // pnlSelection
+            // picLogo
             // 
-            pnlSelection.BackColor = Color.FromArgb(250, 250, 250);
-            pnlSelection.Controls.Add(panelButtons);
-            pnlSelection.Controls.Add(lblSelectedCandidate);
-            pnlSelection.Dock = DockStyle.Bottom;
-            pnlSelection.Location = new Point(0, 480);
-            pnlSelection.Name = "pnlSelection";
-            pnlSelection.Padding = new Padding(40, 20, 40, 20);
-            pnlSelection.Size = new Size(900, 170);
-            pnlSelection.TabIndex = 2;
+            picLogo.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            picLogo.BackgroundImage = Properties.Resources._13;
+            picLogo.BackgroundImageLayout = ImageLayout.Zoom;
+            picLogo.Location = new Point(4, 4);
+            picLogo.Margin = new Padding(4);
+            picLogo.Name = "picLogo";
+            picLogo.Size = new Size(57, 41);
+            picLogo.TabIndex = 1;
+            picLogo.TabStop = false;
             // 
-            // panelButtons
+            // panel2
             // 
-            panelButtons.Controls.Add(btnCancel);
-            panelButtons.Controls.Add(btnSubmit);
-            panelButtons.Dock = DockStyle.Top;
-            panelButtons.Location = new Point(40, 70);
-            panelButtons.Name = "panelButtons";
-            panelButtons.Size = new Size(820, 80);
-            panelButtons.TabIndex = 2;
+            panel2.BackColor = Color.FromArgb(15, 22, 40);
+            panel2.Controls.Add(btnSubmit);
+            panel2.Controls.Add(label1);
+            panel2.Location = new Point(99, 119);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(1142, 566);
+            panel2.TabIndex = 1;
+            //panel2.Paint += panel2_Paint;
             // 
-            // btnCancel
+            // label1
             // 
-            btnCancel.BackColor = Color.FromArgb(149, 165, 166);
-            btnCancel.FlatAppearance.BorderSize = 0;
-            btnCancel.FlatStyle = FlatStyle.Flat;
-            btnCancel.Font = new Font("Segoe UI", 11F);
-            btnCancel.ForeColor = Color.White;
-            btnCancel.Location = new Point(230, 15);
-            btnCancel.Name = "btnCancel";
-            btnCancel.Size = new Size(120, 45);
-            btnCancel.TabIndex = 1;
-            btnCancel.Text = "Cancel";
-            btnCancel.UseVisualStyleBackColor = false;
-            btnCancel.Click += btnCancel_Click;
+            label1.AutoSize = true;
+            label1.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label1.ForeColor = Color.White;
+            label1.Location = new Point(54, 13);
+            label1.Name = "label1";
+            label1.Size = new Size(206, 25);
+            label1.TabIndex = 0;
+            label1.Text = "Select Your Candidate";
             // 
             // btnSubmit
             // 
-            btnSubmit.BackColor = Color.FromArgb(52, 152, 219);
-            btnSubmit.FlatAppearance.BorderSize = 0;
-            btnSubmit.FlatStyle = FlatStyle.Flat;
-            btnSubmit.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            btnSubmit.Anchor = AnchorStyles.Bottom;
+            btnSubmit.BackColor = SystemColors.Highlight;
+            btnSubmit.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnSubmit.ForeColor = Color.White;
-            btnSubmit.Location = new Point(20, 15);
+            btnSubmit.Location = new Point(442, 503);
             btnSubmit.Name = "btnSubmit";
-            btnSubmit.Size = new Size(200, 45);
-            btnSubmit.TabIndex = 0;
-            btnSubmit.Text = "Submit My Vote Securely";
+            btnSubmit.Size = new Size(222, 48);
+            btnSubmit.TabIndex = 20;
+            btnSubmit.Text = "Submit";
             btnSubmit.UseVisualStyleBackColor = false;
-            btnSubmit.Click += btnSubmit_Click;
-            // 
-            // lblSelectedCandidate
-            // 
-            lblSelectedCandidate.Dock = DockStyle.Top;
-            lblSelectedCandidate.Font = new Font("Segoe UI", 14F);
-            lblSelectedCandidate.ForeColor = Color.Gray;
-            lblSelectedCandidate.Location = new Point(40, 20);
-            lblSelectedCandidate.Name = "lblSelectedCandidate";
-            lblSelectedCandidate.Size = new Size(820, 50);
-            lblSelectedCandidate.TabIndex = 0;
-            lblSelectedCandidate.Text = "Your selection: None";
-            lblSelectedCandidate.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // statusBar
-            // 
-            statusBar.BackColor = Color.FromArgb(44, 62, 80);
-            statusBar.Controls.Add(lblVoterId);
-            statusBar.Controls.Add(lblConnectionStatus);
-            statusBar.Dock = DockStyle.Bottom;
-            statusBar.Location = new Point(0, 650);
-            statusBar.Name = "statusBar";
-            statusBar.Size = new Size(900, 50);
-            statusBar.TabIndex = 3;
-            // 
-            // lblVoterId
-            // 
-            lblVoterId.Dock = DockStyle.Right;
-            lblVoterId.Font = new Font("Segoe UI", 9F);
-            lblVoterId.ForeColor = Color.White;
-            lblVoterId.Location = new Point(450, 0);
-            lblVoterId.Name = "lblVoterId";
-            lblVoterId.Padding = new Padding(0, 0, 20, 0);
-            lblVoterId.Size = new Size(450, 50);
-            lblVoterId.TabIndex = 1;
-            lblVoterId.Text = "Your Voter ID: 873-XXX-120";
-            lblVoterId.TextAlign = ContentAlignment.MiddleRight;
-            // 
-            // lblConnectionStatus
-            // 
-            lblConnectionStatus.Dock = DockStyle.Left;
-            lblConnectionStatus.Font = new Font("Segoe UI", 9F);
-            lblConnectionStatus.ForeColor = Color.White;
-            lblConnectionStatus.Location = new Point(0, 0);
-            lblConnectionStatus.Name = "lblConnectionStatus";
-            lblConnectionStatus.Padding = new Padding(20, 0, 0, 0);
-            lblConnectionStatus.Size = new Size(450, 50);
-            lblConnectionStatus.TabIndex = 0;
-            lblConnectionStatus.Text = "Connection Secured & Encrypted";
-            lblConnectionStatus.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // frmVoterDashboard
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            BackColor = Color.White;
-            ClientSize = new Size(900, 700);
-            Controls.Add(panelContainer);
-            Controls.Add(pnlSelection);
-            Controls.Add(statusBar);
-            Controls.Add(lblTitle);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
-            MinimizeBox = false;
+            BackgroundImage = Properties.Resources._10;
+            BackgroundImageLayout = ImageLayout.Stretch;
+            ClientSize = new Size(1302, 706);
+            Controls.Add(panel2);
+            Controls.Add(panel1);
             Name = "frmVoterDashboard";
-            StartPosition = FormStartPosition.CenterScreen;
-            Text = "Voter Dashboard - Election Management System";
-            Load += frmVoterDashboard_Load;
-            panelContainer.ResumeLayout(false);
-            pnlSelection.ResumeLayout(false);
-            panelButtons.ResumeLayout(false);
-            statusBar.ResumeLayout(false);
+            Text = "frmVoterDashboard";
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();
+            panel2.ResumeLayout(false);
+            panel2.PerformLayout();
             ResumeLayout(false);
         }
 
         #endregion
 
-        private System.Windows.Forms.Label lblTitle;
-        private System.Windows.Forms.Panel panelContainer;
-        private System.Windows.Forms.FlowLayoutPanel flowCandidates;
-        private System.Windows.Forms.Panel pnlSelection;
-        private System.Windows.Forms.Label lblSelectedCandidate;
-        private System.Windows.Forms.Panel panelButtons;
-        private System.Windows.Forms.Button btnCancel;
-        private System.Windows.Forms.Button btnSubmit;
-        private System.Windows.Forms.Panel statusBar;
-        private System.Windows.Forms.Label lblVoterId;
-        private System.Windows.Forms.Label lblConnectionStatus;
+     
     }
 }

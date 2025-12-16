@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -13,42 +14,61 @@ namespace Election.UI.Forms
 {
     public partial class frmVoterDashboard : Form
     {
-        private HttpClient _httpClient;
+        // ===== CONTROL DECLARATIONS =====
+        private Panel panel1;
+        private PictureBox picLogo;
+        private Label lblSystemTitle;
+        private Button btnLogout;
+        private Panel panel2;
+        private Label label1;
+        private Button btnSubmit;
+        private FlowLayoutPanel flowCandidates;
+        private Label lblSelectedCandidate;
+        private Label lblVoterId;
+        private Button btnCancel;
+
+        private readonly HttpClient _httpClient;
         private int _selectedCandidateId = 0;
         private string _selectedCandidateName = "";
         private string _selectedCandidateParty = "";
-        private int _voterId;
-        private string _voterEmail;
-        private Dictionary<int, Panel> _candidatePanels = new Dictionary<int, Panel>();
+        private readonly int _voterId;
+        private readonly string _voterEmail;
+        private readonly Dictionary<int, Panel> _candidatePanels = new Dictionary<int, Panel>();
 
-        private Color primaryColor = Color.FromArgb(44, 62, 80);
-        private Color accentColor = Color.FromArgb(52, 152, 219);
-        private Color cardColor = Color.FromArgb(236, 240, 241);
-        private Color selectedColor = Color.FromArgb(46, 204, 113);
+        private readonly Color primaryColor = Color.FromArgb(44, 62, 80);
+        private readonly Color accentColor = Color.FromArgb(52, 152, 219);
+        private readonly Color cardColor = Color.FromArgb(236, 240, 241);
+        private readonly Color selectedColor = Color.FromArgb(46, 204, 113);
 
-        // DTO classes that MATCH your VoteController responses
+        // ===== AUTO-REFRESH VARIABLES =====
+        private System.Windows.Forms.Timer _autoRefreshTimer;
+        private DateTime _lastRefreshTime;
+        private Label lblLastRefresh;
+        private Button btnManualRefresh;
+
+        // ===== DTO CLASSES =====
         public class HasVotedResponse
         {
-            public bool success { get; set; }
-            public bool hasVoted { get; set; }
+            public bool Success { get; set; }
+            public bool HasVoted { get; set; }
         }
 
         public class VoteSubmitResponse
         {
-            public bool success { get; set; }
-            public string message { get; set; } = "";
-            public int voteId { get; set; }
-            public string candidateName { get; set; } = "";
-            public string party { get; set; } = "";
-            public string voteDate { get; set; } = "";
-            public string errorCode { get; set; } = "";
+            public bool Success { get; set; }
+            public string Message { get; set; } = "";
+            public int VoteId { get; set; }
+            public string CandidateName { get; set; } = "";
+            public string Party { get; set; } = "";
+            public string VoteDate { get; set; } = "";
+            public string ErrorCode { get; set; } = "";
         }
 
         public class ErrorResponseDto
         {
-            public bool success { get; set; }
-            public string message { get; set; } = "";
-            public string errorCode { get; set; } = "";
+            public bool Success { get; set; }
+            public string Message { get; set; } = "";
+            public string ErrorCode { get; set; } = "";
         }
 
         public class CandidateDto
@@ -62,45 +82,253 @@ namespace Election.UI.Forms
             public bool IsApproved { get; set; }
         }
 
+        // ===== CONSTRUCTOR =====
         public frmVoterDashboard(int voterId, string voterEmail)
         {
             InitializeComponent();
+
+            // Form properties
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.MaximizeBox = true;
+            this.MinimizeBox = true;
+            this.WindowState = FormWindowState.Maximized;
+
             _voterId = voterId;
             _voterEmail = voterEmail;
             _httpClient = new HttpClient { BaseAddress = new Uri("https://localhost:7208") };
-            SetupForm();
+
+            // Initialize controls
+            InitializeControls();
+
+            // Initialize auto-refresh timer
+            InitializeAutoRefresh();
+
+            // Handle form events
+            this.Resize += FrmVoterDashboard_Resize;
+            this.FormClosing += FrmVoterDashboard_FormClosing;
         }
 
-        private void SetupForm()
+        // ===== FORM RESIZE HANDLER =====
+        private void FrmVoterDashboard_Resize(object sender, EventArgs e)
         {
-            lblVoterId.Text = $"Your Voter ID: {_voterId:D3}-XXX-{(_voterId % 1000):D3}";
+            if (this.WindowState == FormWindowState.Minimized) return;
+            AdjustLayout();
         }
 
-        private async void frmVoterDashboard_Load(object sender, EventArgs e)
+        // ===== FORM CLOSING HANDLER =====
+        private void FrmVoterDashboard_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Cleanup auto-refresh timer
+            if (_autoRefreshTimer != null)
+            {
+                _autoRefreshTimer.Stop();
+                _autoRefreshTimer.Dispose();
+                _autoRefreshTimer = null;
+            }
+        }
+
+        private void AdjustLayout()
+        {
+            if (panel2 != null)
+            {
+                panel2.Size = new Size(this.ClientSize.Width - 198, this.ClientSize.Height - 155);
+                panel2.Location = new Point(99, 119);
+
+                if (flowCandidates != null)
+                {
+                    flowCandidates.Size = new Size(panel2.Width - 108, 400);
+
+                    foreach (Control control in flowCandidates.Controls)
+                    {
+                        if (control is Panel card)
+                        {
+                            card.Width = Math.Min(760, panel2.Width - 120);
+                        }
+                    }
+                }
+
+                if (lblSelectedCandidate != null)
+                {
+                    lblSelectedCandidate.Location = new Point(50, panel2.Height - 106);
+                }
+
+                if (lblVoterId != null)
+                {
+                    lblVoterId.Location = new Point(panel2.Width - 350, panel2.Height - 106);
+                }
+
+                if (btnSubmit != null)
+                {
+                    btnSubmit.Location = new Point(
+                        (panel2.Width - btnSubmit.Width) / 2,
+                        panel2.Height - 63
+                    );
+                }
+
+                // Adjust refresh label
+                if (lblLastRefresh != null)
+                {
+                    lblLastRefresh.Location = new Point(panel2.Width - 350, panel2.Height - 80);
+                }
+
+                // Adjust refresh button
+                if (btnManualRefresh != null)
+                {
+                    btnManualRefresh.Location = new Point(panel2.Width - 150, 20);
+                }
+            }
+        }
+
+        private void InitializeControls()
+        {
+            // Find controls from Designer
+            panel1 = Controls["panel1"] as Panel;
+            picLogo = panel1?.Controls["picLogo"] as PictureBox;
+            lblSystemTitle = panel1?.Controls["lblSystemTitle"] as Label;
+            btnLogout = panel1?.Controls["btnLogout"] as Button;
+
+            panel2 = Controls["panel2"] as Panel;
+            label1 = panel2?.Controls["label1"] as Label;
+            btnSubmit = panel2?.Controls["btnSubmit"] as Button;
+
+            // Create dynamic controls
+            if (flowCandidates == null)
+            {
+                flowCandidates = new FlowLayoutPanel
+                {
+                    Name = "flowCandidates",
+                    Location = new Point(50, 60),
+                    Size = new Size(1042, 400),
+                    AutoScroll = true,
+                    BackColor = Color.Transparent,
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                };
+                panel2.Controls.Add(flowCandidates);
+            }
+
+            if (lblSelectedCandidate == null)
+            {
+                lblSelectedCandidate = new Label
+                {
+                    Name = "lblSelectedCandidate",
+                    Location = new Point(50, 470),
+                    Size = new Size(400, 25),
+                    Font = new Font("Segoe UI", 12F, FontStyle.Regular),
+                    ForeColor = accentColor,
+                    Text = "Your selection: None",
+                    Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+                };
+                panel2.Controls.Add(lblSelectedCandidate);
+            }
+
+            if (lblVoterId == null)
+            {
+                lblVoterId = new Label
+                {
+                    Name = "lblVoterId",
+                    Location = new Point(800, 470),
+                    Size = new Size(300, 25),
+                    Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+                    ForeColor = Color.White,
+                    Text = $"Your Voter ID: {_voterId:D3}-XXX-{(_voterId % 1000):D3}",
+                    Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+                };
+                panel2.Controls.Add(lblVoterId);
+            }
+
+            // Create last refresh time label
+            lblLastRefresh = new Label
+            {
+                Name = "lblLastRefresh",
+                Location = new Point(800, 500),
+                Size = new Size(300, 20),
+                Font = new Font("Segoe UI", 8, FontStyle.Italic),
+                ForeColor = Color.LightGray,
+                Text = "Last refresh: --:--:--",
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+            };
+            panel2.Controls.Add(lblLastRefresh);
+
+            // Create manual refresh button
+            btnManualRefresh = new Button
+            {
+                Name = "btnManualRefresh",
+                Text = "🔄 Refresh",
+                Location = new Point(panel2.Width - 150, 20),
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(52, 152, 219),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnManualRefresh.FlatAppearance.BorderSize = 0;
+            btnManualRefresh.Click += async (s, e) => await ManualRefreshCandidates();
+            panel2.Controls.Add(btnManualRefresh);
+
+            // Wire up events
+            if (btnSubmit != null) btnSubmit.Click += BtnSubmit_Click;
+            if (btnLogout != null) btnLogout.Click += BtnLogout_Click;
+        }
+
+        // ===== AUTO-REFRESH METHODS =====
+        private void InitializeAutoRefresh()
+        {
+            _autoRefreshTimer = new System.Windows.Forms.Timer();
+            _autoRefreshTimer.Interval = 10000; // 10 seconds
+            _autoRefreshTimer.Tick += async (sender, e) =>
+            {
+                if (this.Visible && !this.IsDisposed)
+                {
+                    try
+                    {
+                        await LoadApprovedCandidates();
+                        _lastRefreshTime = DateTime.Now;
+                        UpdateLastRefreshLabel();
+                    }
+                    catch { /* Silent fail */ }
+                }
+            };
+
+            _autoRefreshTimer.Start();
+            _lastRefreshTime = DateTime.Now;
+            UpdateLastRefreshLabel();
+        }
+
+        private async Task ManualRefreshCandidates()
         {
             try
             {
-                // ⚠️ TEMPORARILY COMMENTED OUT - Voting check disabled for testing
-                /*
-                // Check if already voted - USING CORRECT DTO
-                var hasVotedResponse = await _httpClient.GetAsync($"api/vote/hasvoted/{_voterId}");
-                if (hasVotedResponse.IsSuccessStatusCode)
-                {
-                    // ✅ CORRECT: Use HasVotedResponse DTO that matches API
-                    var result = await hasVotedResponse.Content.ReadFromJsonAsync<HasVotedResponse>();
-                    if (result != null && result.success && result.hasVoted)
-                    {
-                        MessageBox.Show("You have already voted!", "Information",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                btnManualRefresh.Enabled = false;
+                btnManualRefresh.Text = "Refreshing...";
+                await LoadApprovedCandidates();
+                _lastRefreshTime = DateTime.Now;
+                UpdateLastRefreshLabel();
+                btnManualRefresh.Enabled = true;
+                btnManualRefresh.Text = "🔄 Refresh";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                btnManualRefresh.Enabled = true;
+                btnManualRefresh.Text = "🔄 Refresh";
+            }
+        }
 
-                        // Redirect to login page if already voted
-                        RedirectToLogin();
-                        return;
-                    }
-                }
-                */
+        private void UpdateLastRefreshLabel()
+        {
+            if (lblLastRefresh != null && !lblLastRefresh.IsDisposed)
+            {
+                lblLastRefresh.Text = $"Last refresh: {_lastRefreshTime:HH:mm:ss}";
+            }
+        }
 
-                // Load approved candidates
+        // ===== FORM LOAD =====
+        private async void FrmVoterDashboard_Load(object sender, EventArgs e)
+        {
+            try
+            {
                 await LoadApprovedCandidates();
             }
             catch (Exception ex)
@@ -110,23 +338,63 @@ namespace Election.UI.Forms
             }
         }
 
+        // ===== LOAD APPROVED CANDIDATES =====
         private async Task LoadApprovedCandidates()
         {
             try
             {
                 var response = await _httpClient.GetAsync("api/candidate/approved");
+
                 if (response.IsSuccessStatusCode)
                 {
-                    var candidates = await response.Content.ReadFromJsonAsync<List<CandidateDto>>();
+                    // Read the response
+                    string responseContent = await response.Content.ReadAsStringAsync();
 
-                    if (candidates == null || candidates.Count == 0)
+                    // Parse the JSON
+                    using var jsonDoc = JsonDocument.Parse(responseContent);
+                    var json = jsonDoc.RootElement;
+
+                    List<CandidateDto> candidates = new List<CandidateDto>();
+
+                    // Extract candidates from "candidates" property
+                    if (json.TryGetProperty("candidates", out var candidatesArray))
                     {
-                        MessageBox.Show("No approved candidates available for voting.",
-                            "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        foreach (var candidate in candidatesArray.EnumerateArray())
+                        {
+                            var candidateDto = new CandidateDto
+                            {
+                                Id = candidate.GetProperty("id").GetInt32(),
+                                Name = candidate.GetProperty("name").GetString(),
+                                Party = candidate.GetProperty("party").GetString(),
+                                Region = candidate.GetProperty("region").GetString(),
+                                Age = candidate.GetProperty("age").GetInt32(),
+                                PhotoPath = candidate.GetProperty("photoPath").GetString(),
+                                IsApproved = candidate.GetProperty("isApproved").GetBoolean()
+                            };
+                            candidates.Add(candidateDto);
+                        }
+                    }
+
+                    // Display candidates
+                    if (candidates.Count == 0)
+                    {
+                        // Show no candidates message
+                        DisplayCandidates(new List<CandidateDto>());
                         return;
                     }
 
                     DisplayCandidates(candidates);
+
+                    // Update last refresh time
+                    _lastRefreshTime = DateTime.Now;
+                    UpdateLastRefreshLabel();
+
+                    // Update selection label
+                    if (lblSelectedCandidate != null && _selectedCandidateId == 0)
+                    {
+                        lblSelectedCandidate.Text = $"Select from {candidates.Count} approved candidate(s)";
+                        lblSelectedCandidate.ForeColor = accentColor;
+                    }
                 }
                 else
                 {
@@ -141,10 +409,30 @@ namespace Election.UI.Forms
             }
         }
 
+        // ===== DISPLAY CANDIDATES WITH RADIO BUTTONS =====
         private void DisplayCandidates(List<CandidateDto> candidates)
         {
+            if (flowCandidates == null) return;
+
+            flowCandidates.SuspendLayout();
             flowCandidates.Controls.Clear();
             _candidatePanels.Clear();
+
+            if (candidates.Count == 0)
+            {
+                Label lblNoCandidates = new Label
+                {
+                    Text = "📭 No approved candidates available for voting.\n\nCandidates are being reviewed by administrators.\nPlease check back later.",
+                    Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                    ForeColor = Color.Gray,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Padding = new Padding(20)
+                };
+                flowCandidates.Controls.Add(lblNoCandidates);
+                flowCandidates.ResumeLayout();
+                return;
+            }
 
             foreach (var candidate in candidates)
             {
@@ -152,13 +440,22 @@ namespace Election.UI.Forms
                 flowCandidates.Controls.Add(candidateCard);
                 _candidatePanels[candidate.Id] = candidateCard;
             }
+
+            // If there's a previously selected candidate, highlight it
+            if (_selectedCandidateId > 0 && _candidatePanels.ContainsKey(_selectedCandidateId))
+            {
+                SelectCandidate(_selectedCandidateId, _selectedCandidateName, _selectedCandidateParty);
+            }
+
+            flowCandidates.ResumeLayout();
         }
 
+        // ===== CREATE CANDIDATE CARD WITH RADIO BUTTON =====
         private Panel CreateCandidateCard(CandidateDto candidate)
         {
             var card = new Panel
             {
-                Width = 760,
+                Width = Math.Min(760, flowCandidates.Width - 40),
                 Height = 100,
                 BackColor = cardColor,
                 Margin = new Padding(10),
@@ -168,12 +465,24 @@ namespace Election.UI.Forms
                 Tag = candidate.Id
             };
 
-            // Photo container
+            // ===== 1. RADIO BUTTON (LEFT SIDE) =====
+            RadioButton radioCandidate = new RadioButton
+            {
+                Name = "radioCandidateGroup", // Same name groups them together
+                Text = "", // No text
+                Location = new Point(15, 35),
+                Size = new Size(20, 20),
+                Tag = candidate.Id,
+                Checked = (_selectedCandidateId == candidate.Id),
+                Appearance = Appearance.Normal
+            };
+
+            // ===== 2. PHOTO =====
             var photoContainer = new Panel
             {
                 Width = 70,
                 Height = 70,
-                Location = new Point(15, 15),
+                Location = new Point(45, 15), // Moved right to make space for radio
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -187,43 +496,96 @@ namespace Election.UI.Forms
                 BackColor = Color.White
             };
 
-            // Load photo
             LoadCandidatePhoto(photoBox, candidate.PhotoPath, candidate.Name);
             photoContainer.Controls.Add(photoBox);
 
-            // Candidate name
+            // ===== 3. CANDIDATE INFO =====
             var lblName = new Label
             {
                 Text = candidate.Name.ToUpper(),
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = primaryColor,
-                Location = new Point(100, 20),
+                Location = new Point(130, 20), // Adjusted position
                 AutoSize = true
             };
 
-            // Party name
             var lblParty = new Label
             {
                 Text = candidate.Party,
                 Font = new Font("Segoe UI", 11, FontStyle.Regular),
                 ForeColor = Color.FromArgb(52, 73, 94),
-                Location = new Point(100, 50),
+                Location = new Point(130, 50), // Adjusted position
                 AutoSize = true
             };
 
-            // Add click events
-            card.Click += (s, e) => SelectCandidate(candidate.Id, candidate.Name, candidate.Party);
-            photoContainer.Click += (s, e) => SelectCandidate(candidate.Id, candidate.Name, candidate.Party);
-            photoBox.Click += (s, e) => SelectCandidate(candidate.Id, candidate.Name, candidate.Party);
-            lblName.Click += (s, e) => SelectCandidate(candidate.Id, candidate.Name, candidate.Party);
-            lblParty.Click += (s, e) => SelectCandidate(candidate.Id, candidate.Name, candidate.Party);
+            var lblApproved = new Label
+            {
+                Text = "✅ APPROVED",
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                ForeColor = Color.Green,
+                Location = new Point(card.Width - 120, 20),
+                Size = new Size(100, 20),
+                TextAlign = ContentAlignment.MiddleRight
+            };
 
-            // Add controls to card
+            // ===== 4. RADIO BUTTON EVENT =====
+            radioCandidate.CheckedChanged += (s, e) =>
+            {
+                if (radioCandidate.Checked)
+                {
+                    SelectCandidate(candidate.Id, candidate.Name, candidate.Party);
+                }
+            };
+
+            // ===== 5. CARD CLICK ALSO SELECTS RADIO =====
+            card.Click += (s, e) =>
+            {
+                radioCandidate.Checked = true;
+            };
+
+            // Click events for other controls
+            photoContainer.Click += (s, e) => radioCandidate.Checked = true;
+            photoBox.Click += (s, e) => radioCandidate.Checked = true;
+            lblName.Click += (s, e) => radioCandidate.Checked = true;
+            lblParty.Click += (s, e) => radioCandidate.Checked = true;
+            lblApproved.Click += (s, e) => radioCandidate.Checked = true;
+
+            // ===== 6. ADD ALL CONTROLS TO CARD =====
+            card.Controls.Add(radioCandidate);
             card.Controls.Add(photoContainer);
             card.Controls.Add(lblName);
             card.Controls.Add(lblParty);
+            card.Controls.Add(lblApproved);
 
             return card;
+        }
+
+        // ===== SELECT CANDIDATE METHOD =====
+        private void SelectCandidate(int candidateId, string name, string party)
+        {
+            // Reset all cards to default appearance
+            foreach (var panel in _candidatePanels.Values)
+            {
+                panel.BackColor = cardColor;
+                panel.BorderStyle = BorderStyle.None;
+            }
+
+            // Highlight selected card
+            if (_candidatePanels.TryGetValue(candidateId, out var selectedPanel))
+            {
+                selectedPanel.BackColor = selectedColor;
+                selectedPanel.BorderStyle = BorderStyle.FixedSingle;
+            }
+
+            _selectedCandidateId = candidateId;
+            _selectedCandidateName = name;
+            _selectedCandidateParty = party;
+
+            if (lblSelectedCandidate != null)
+            {
+                lblSelectedCandidate.Text = $"Your selection: {name} ({party})";
+                lblSelectedCandidate.ForeColor = accentColor;
+            }
         }
 
         private async void LoadCandidatePhoto(PictureBox pictureBox, string photoPath, string candidateName)
@@ -247,13 +609,12 @@ namespace Election.UI.Forms
             }
         }
 
-        private Image CreateDefaultPhoto(string name)
+        private Bitmap CreateDefaultPhoto(string name)
         {
             var bmp = new Bitmap(66, 66);
             using (var g = Graphics.FromImage(bmp))
             {
                 g.Clear(Color.FromArgb(189, 195, 199));
-
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 using (var brush = new SolidBrush(Color.FromArgb(127, 140, 141)))
                 {
@@ -277,7 +638,7 @@ namespace Election.UI.Forms
             return bmp;
         }
 
-        private string GetInitials(string name)
+        private static string GetInitials(string name)
         {
             var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
@@ -288,33 +649,7 @@ namespace Election.UI.Forms
                 return "CD";
         }
 
-        private void SelectCandidate(int candidateId, string name, string party)
-        {
-            // Reset all cards
-            foreach (var panel in _candidatePanels.Values)
-            {
-                panel.BackColor = cardColor;
-                panel.BorderStyle = BorderStyle.None;
-            }
-
-            // Highlight selected
-            if (_candidatePanels.ContainsKey(candidateId))
-            {
-                _candidatePanels[candidateId].BackColor = selectedColor;
-                _candidatePanels[candidateId].BorderStyle = BorderStyle.FixedSingle;
-            }
-
-            // Update selection
-            _selectedCandidateId = candidateId;
-            _selectedCandidateName = name;
-            _selectedCandidateParty = party;
-
-            // Update label
-            lblSelectedCandidate.Text = $"Your selection: {name}";
-            lblSelectedCandidate.ForeColor = accentColor;
-        }
-
-        private async void btnSubmit_Click(object sender, EventArgs e)
+        private async void BtnSubmit_Click(object sender, EventArgs e)
         {
             if (_selectedCandidateId == 0)
             {
@@ -324,141 +659,87 @@ namespace Election.UI.Forms
             }
 
             var confirm = MessageBox.Show(
-                $"CONFIRM YOUR VOTE:\n\n" +
-                $"Candidate: {_selectedCandidateName}\n" +
-                $"Party: {_selectedCandidateParty}\n\n" +
-                $"This action cannot be undone!",
-                "Final Confirmation",
-                MessageBoxButtons.OKCancel,
-                MessageBoxIcon.Exclamation);
+                $"CONFIRM YOUR VOTE:\n\nCandidate: {_selectedCandidateName}\nParty: {_selectedCandidateParty}\n\nThis action cannot be undone!",
+                "Final Confirmation", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
 
-            if (confirm != DialogResult.OK)
-                return;
+            if (confirm != DialogResult.OK) return;
 
             try
             {
-                // Disable button during submission
                 btnSubmit.Enabled = false;
                 btnSubmit.Text = "Submitting...";
 
                 var voteRequest = new { UserId = _voterId, CandidateId = _selectedCandidateId };
                 var response = await _httpClient.PostAsJsonAsync("api/vote/submit", voteRequest);
-
-                // Read response content
                 string responseContent = await response.Content.ReadAsStringAsync();
 
-                // Try to parse as JSON
-                try
+                using var jsonDoc = JsonDocument.Parse(responseContent);
+                var json = jsonDoc.RootElement;
+
+                bool success = json.GetProperty("success").GetBoolean();
+                string message = json.GetProperty("message").GetString();
+
+                if (success)
                 {
-                    using var jsonDoc = JsonDocument.Parse(responseContent);
-                    var json = jsonDoc.RootElement;
+                    string candidateName = json.TryGetProperty("candidateName", out var cn) ? cn.GetString() : _selectedCandidateName;
 
-                    bool success = json.GetProperty("success").GetBoolean();
-                    string message = json.GetProperty("message").GetString();
+                    MessageBox.Show($"✅ VOTE SUCCESSFULLY SUBMITTED!\n\nCandidate: {candidateName}\nYour vote has been recorded.\n\nThank you for participating in the election!",
+                        "Vote Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    if (success)
+                    // Stop auto-refresh after voting
+                    if (_autoRefreshTimer != null)
                     {
-                        // SUCCESS
-                        string candidateName = json.TryGetProperty("candidateName", out var cn) ? cn.GetString() : _selectedCandidateName;
-
-                        MessageBox.Show(
-                            $"✅ VOTE SUCCESSFULLY SUBMITTED!\n\n" +
-                            $"Candidate: {candidateName}\n" +
-                            $"Your vote has been recorded.\n\n" +
-                            $"Thank you for participating in the election!",
-                            "Vote Successful",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
-
-                        // Redirect to login
-                        RedirectToLogin();
+                        _autoRefreshTimer.Stop();
                     }
-                    else
+
+                    RedirectToLogin();
+                }
+                else
+                {
+                    string errorCode = json.TryGetProperty("errorCode", out var ec) ? ec.GetString() : "UNKNOWN_ERROR";
+
+                    switch (errorCode)
                     {
-                        // ERROR - Check error type
-                        string errorCode = json.TryGetProperty("errorCode", out var ec) ? ec.GetString() : "UNKNOWN_ERROR";
+                        case "ALREADY_VOTED":
+                        case "VOTE_ALREADY_RECORDED":
+                        case "DB_DUPLICATE_VOTE":
+                            string voteDate = json.TryGetProperty("voteDate", out var vd) ? vd.GetString() : "previously";
 
-                        switch (errorCode)
-                        {
-                            case "ALREADY_VOTED":
-                            case "VOTE_ALREADY_RECORDED":
-                            case "DB_DUPLICATE_VOTE":
-                                // User already voted
-                                string voteDate = json.TryGetProperty("voteDate", out var vd) ? vd.GetString() : "previously";
+                            var result = MessageBox.Show($"⛔ YOU HAVE ALREADY VOTED!\n\nYou voted {voteDate}.\n\nWould you like to reset your voting status? (Admin only)",
+                                "Already Voted", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
-                                var result = MessageBox.Show(
-                                    $"⛔ YOU HAVE ALREADY VOTED!\n\n" +
-                                    $"You voted {voteDate}.\n\n" +
-                                    $"Would you like to reset your voting status? (Admin only)",
-                                    "Already Voted",
-                                    MessageBoxButtons.YesNo,
-                                    MessageBoxIcon.Warning);
-
-                                if (result == DialogResult.Yes)
-                                {
-                                    // Try to reset voting status
-                                    await ResetUserVotingStatus(_voterId);
-                                }
-                                else
-                                {
-                                    // Redirect to login
-                                    RedirectToLogin();
-                                }
-                                break;
-
-                            case "USER_NOT_FOUND":
-                                MessageBox.Show(
-                                    "Your user account was not found. Please log in again.",
-                                    "Account Error",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Error);
+                            if (result == DialogResult.Yes)
+                            {
+                                await ResetUserVotingStatus(_voterId);
+                            }
+                            else
+                            {
                                 RedirectToLogin();
-                                break;
+                            }
+                            break;
 
-                            case "CANDIDATE_NOT_FOUND":
-                                MessageBox.Show(
-                                    "The selected candidate is no longer available. Please select another candidate.",
-                                    "Candidate Not Available",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Warning);
-                                break;
+                        case "USER_NOT_FOUND":
+                            MessageBox.Show("Your user account was not found. Please log in again.",
+                                "Account Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            RedirectToLogin();
+                            break;
 
-                            default:
-                                MessageBox.Show(
-                                    $"Failed to submit vote:\n{message}",
-                                    "Error",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Error);
-                                break;
-                        }
+                        case "CANDIDATE_NOT_FOUND":
+                            MessageBox.Show("The selected candidate is no longer available. Please select another candidate.",
+                                "Candidate Not Available", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            break;
+
+                        default:
+                            MessageBox.Show($"Failed to submit vote:\n{message}", "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            break;
                     }
                 }
-                catch (JsonException)
-                {
-                    // Not JSON, show raw response
-                    MessageBox.Show(
-                        $"Server response:\n{responseContent}",
-                        "Submission Result",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                }
-            }
-            catch (HttpRequestException httpEx)
-            {
-                MessageBox.Show(
-                    $"Cannot connect to server:\n{httpEx.Message}\n\n" +
-                    $"Please check your internet connection and try again.",
-                    "Connection Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Error: {ex.Message}",
-                    "Submission Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Submission Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -467,22 +748,6 @@ namespace Election.UI.Forms
             }
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            if (_selectedCandidateId > 0)
-            {
-                var confirm = MessageBox.Show("Are you sure you want to cancel voting?\nYour selection will be lost.",
-                    "Cancel Voting", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                if (confirm == DialogResult.No)
-                    return;
-            }
-
-            // ✅ REDIRECT TO LOGIN PAGE WHEN CANCELLING
-            RedirectToLogin();
-        }
-
-        // Helper method to reset user's voting status
         private async Task ResetUserVotingStatus(int userId)
         {
             try
@@ -497,14 +762,9 @@ namespace Election.UI.Forms
 
                     if (json.GetProperty("success").GetBoolean())
                     {
-                        MessageBox.Show(
-                            "✅ Your voting status has been reset!\n\n" +
-                            "You can now vote again.",
-                            "Reset Successful",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
+                        MessageBox.Show("✅ Your voting status has been reset!\n\nYou can now vote again.",
+                            "Reset Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        // Refresh candidate list
                         await LoadApprovedCandidates();
                     }
                 }
@@ -516,23 +776,29 @@ namespace Election.UI.Forms
             }
         }
 
-        /// <summary>
-        /// Helper method to redirect to login page
-        /// </summary>
         private void RedirectToLogin()
         {
-            this.Hide(); // Hide current voter dashboard
+            if (_autoRefreshTimer != null)
+            {
+                _autoRefreshTimer.Stop();
+                _autoRefreshTimer.Dispose();
+                _autoRefreshTimer = null;
+            }
 
-            // Create and show login form
-            frmLogin loginForm = new frmLogin();
-            loginForm.Show();
-
-            this.Close(); // Close voter dashboard completely
+            Hide();
+            new frmLogin().Show();
+            Close();
         }
 
-        private void flowCandidates_Paint(object sender, PaintEventArgs e)
+        private void BtnLogout_Click(object sender, EventArgs e)
         {
+            var confirm = MessageBox.Show("Are you sure you want to logout?", "Confirm Logout",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
+            if (confirm == DialogResult.Yes) RedirectToLogin();
         }
+
+        private void FlowCandidates_Paint(object sender, PaintEventArgs e) { }
+        private void Panel2_Paint(object sender, PaintEventArgs e) { }
     }
 }

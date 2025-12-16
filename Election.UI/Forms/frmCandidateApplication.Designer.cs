@@ -76,8 +76,8 @@
             // 
             // lnkMyProfile
             // 
-            lnkMyProfile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkMyProfile.ActiveLinkColor = Color.DarkBlue;
+            lnkMyProfile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkMyProfile.AutoSize = true;
             lnkMyProfile.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lnkMyProfile.LinkColor = Color.White;
@@ -90,8 +90,8 @@
             // 
             // lnkHome
             // 
-            lnkHome.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkHome.ActiveLinkColor = Color.DarkBlue;
+            lnkHome.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lnkHome.AutoSize = true;
             lnkHome.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lnkHome.LinkColor = Color.White;
@@ -249,7 +249,7 @@
             btnSubmit.BackColor = SystemColors.Highlight;
             btnSubmit.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnSubmit.ForeColor = Color.White;
-            btnSubmit.Location = new Point(438, 589);
+            btnSubmit.Location = new Point(416, 619);
             btnSubmit.Name = "btnSubmit";
             btnSubmit.Size = new Size(277, 48);
             btnSubmit.TabIndex = 19;

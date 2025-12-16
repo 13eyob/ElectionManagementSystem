@@ -20,7 +20,7 @@ namespace Election.API.Controllers
             _environment = environment;
         }
 
-        // ============ ✅ NEW ENDPOINT: Get pending candidates for admin ============
+        // ============ ✅ Get pending candidates for admin ============
         [HttpGet("pending")]
         public async Task<IActionResult> GetPendingCandidates()
         {
@@ -54,7 +54,7 @@ namespace Election.API.Controllers
             }
         }
 
-        // ============ ✅ NEW ENDPOINT: Get rejected candidates ============
+        // ============ ✅ Get rejected candidates ============
         [HttpGet("rejected")]
         public async Task<IActionResult> GetRejectedCandidates()
         {
@@ -106,7 +106,8 @@ namespace Election.API.Controllers
                     })
                     .ToListAsync();
 
-                return Ok(candidates);
+                // ✅ FIXED: Wrap in success object like other endpoints
+                return Ok(new { success = true, candidates });
             }
             catch (Exception ex)
             {
@@ -159,7 +160,7 @@ namespace Election.API.Controllers
                         c.Phone,
                         c.Status,
                         c.IsApproved,
-                        c.IsRejected, // ✅ ADDED: For admin dashboard filtering
+                        c.IsRejected,
                         c.ApplicationDate,
                         HasPhoto = !string.IsNullOrEmpty(c.PhotoFilePath),
                         HasManifesto = !string.IsNullOrEmpty(c.ManifestoFilePath)
@@ -222,8 +223,8 @@ namespace Election.API.Controllers
                     candidate.Phone,
                     candidate.Status,
                     candidate.IsApproved,
-                    candidate.IsRejected, // ✅ ADDED
-                    candidate.AdminRemarks, // ✅ ADDED
+                    candidate.IsRejected,
+                    candidate.AdminRemarks,
                     candidate.ApplicationDate,
                     PhotoBase64 = photoBase64,
                     ManifestoContent = manifestoContent,
@@ -239,7 +240,7 @@ namespace Election.API.Controllers
             }
         }
 
-        // ============ 🔥 Approve candidate - FIXED ============
+        // ============ 🔥 Approve candidate ============
         [HttpPut("approve/{id}")]
         public async Task<IActionResult> ApproveCandidate(int id, [FromBody] string? remarks = null)
         {
@@ -251,10 +252,10 @@ namespace Election.API.Controllers
                     return NotFound(new { success = false, message = "Candidate not found" });
                 }
 
-                // ✅ PROPERLY SET ALL STATUS PROPERTIES
+                // Set all status properties
                 candidate.Status = "Approved";
                 candidate.IsApproved = true;
-                candidate.IsRejected = false; // ✅ IMPORTANT: Clear rejected flag
+                candidate.IsRejected = false;
                 candidate.ApprovalDate = DateTime.Now;
                 candidate.AdminRemarks = remarks ?? "Approved by administrator";
 
@@ -275,7 +276,7 @@ namespace Election.API.Controllers
             }
         }
 
-        // ============ 🔥 Reject candidate - FIXED ============
+        // ============ 🔥 Reject candidate ============
         [HttpPut("reject/{id}")]
         public async Task<IActionResult> RejectCandidate(int id, [FromBody] RejectRequest? request = null)
         {
@@ -287,10 +288,10 @@ namespace Election.API.Controllers
                     return NotFound(new { success = false, message = "Candidate not found" });
                 }
 
-                // ✅ PROPERLY SET ALL STATUS PROPERTIES
+                // Set all status properties
                 candidate.Status = "Rejected";
                 candidate.IsApproved = false;
-                candidate.IsRejected = true; // ✅ IMPORTANT: Set rejected flag
+                candidate.IsRejected = true;
                 candidate.AdminRemarks = request?.Remarks ?? "Rejected by administrator";
 
                 await _db.SaveChangesAsync();
@@ -310,8 +311,7 @@ namespace Election.API.Controllers
             }
         }
 
-        // ============ ✅ EXISTING ENDPOINTS (UNCHANGED) ============
-
+        // ============ ✅ Submit candidate application ============
         [HttpPost("submit")]
         public async Task<IActionResult> SubmitCandidate([FromForm] CandidateRequest model)
         {
@@ -381,7 +381,7 @@ namespace Election.API.Controllers
                     ApplicationDate = DateTime.Now,
                     Status = "Pending",
                     IsApproved = false,
-                    IsRejected = false // ✅ ADDED: Initialize rejected flag
+                    IsRejected = false
                 };
 
                 _db.Candidates.Add(candidate);
@@ -450,7 +450,7 @@ namespace Election.API.Controllers
                     ApplicationDate = candidate.ApplicationDate.ToString("yyyy-MM-dd HH:mm:ss"),
                     Status = candidate.Status,
                     IsApproved = candidate.IsApproved,
-                    IsRejected = candidate.IsRejected // ✅ ADDED
+                    IsRejected = candidate.IsRejected
                 });
             }
             catch (Exception ex)

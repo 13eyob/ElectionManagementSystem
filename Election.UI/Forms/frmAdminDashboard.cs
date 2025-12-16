@@ -741,7 +741,7 @@ namespace Election.UI.Forms
             dgv.Columns.Add("Region", "Region");
             dgv.Columns.Add("Age", "Age");
             dgv.Columns.Add("Email", "Email");
-            dgv.Columns.Add("Votes", "Votes"); // ✅ ADDED: Vote count column
+            dgv.Columns.Add("Votes", "Votes");
             dgv.Columns.Add("Status", "Status");
             dgv.Columns.Add("Date", "Applied On");
 
@@ -790,7 +790,7 @@ namespace Election.UI.Forms
             dgv.Columns.Add("Email", "Email");
             dgv.Columns.Add("Role", "Role");
             dgv.Columns.Add("Region", "Region");
-            dgv.Columns.Add("HasVoted", "Has Voted"); // ✅ ADDED: Voting status
+            dgv.Columns.Add("HasVoted", "Has Voted");
             dgv.Columns.Add("RegisteredDate", "Registered Date");
             dgv.Columns.Add("IsCandidate", "Is Candidate");
 
@@ -864,7 +864,6 @@ namespace Election.UI.Forms
                                 candidate.GetProperty("party").GetString(),
                                 candidate.GetProperty("region").GetString(),
                                 candidate.GetProperty("age").GetInt32(),
-                                //candidate.GetProperty("email")?.GetString() ?? "",
                                 0, // Votes - not available in this endpoint
                                 "✅ Approved",
                                 DateTime.Now.ToString("yyyy-MM-dd")
@@ -1177,55 +1176,70 @@ Admin Remarks:
                 Padding = new Padding(20)
             };
 
-            // Search Panel
+            // ✅ FIXED: Search Panel with proper layout
             Panel searchPanel = new Panel
             {
-                Location = new Point(20, 20),
-                Size = new Size(pnlMainContent.Width - 60, 60),
+                Location = new Point(0, 0),
+                Size = new Size(mainPanel.Width - 40, 60),
                 BackColor = Color.FromArgb(245, 245, 245),
                 BorderStyle = BorderStyle.FixedSingle,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Padding = new Padding(10)
             };
 
             TextBox txtSearch = new TextBox
             {
                 PlaceholderText = "Search voters by name, email, or region...",
-                Location = new Point(20, 15),
-                Size = new Size(pnlMainContent.Width - 200, 30),
+                Location = new Point(10, 15),
+                Size = new Size(searchPanel.Width - 270, 30),
                 Font = new Font("Segoe UI", 11),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Anchor = AnchorStyles.Left | AnchorStyles.Right
             };
 
             Button btnSearch = new Button
             {
                 Text = "🔍 Search",
-                Location = new Point(pnlMainContent.Width - 170, 15),
+                Location = new Point(searchPanel.Width - 240, 15),
                 Size = new Size(100, 30),
                 BackColor = Color.DodgerBlue,
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             btnSearch.FlatAppearance.BorderSize = 0;
 
             Button btnExport = new Button
             {
                 Text = "📥 Export CSV",
-                Location = new Point(pnlMainContent.Width - 60, 15),
+                Location = new Point(searchPanel.Width - 120, 15),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(46, 125, 50),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             btnExport.FlatAppearance.BorderSize = 0;
 
+            // Handle resize events
+            searchPanel.Resize += (s, e) =>
+            {
+                txtSearch.Width = searchPanel.Width - 270;
+                btnSearch.Left = searchPanel.Width - 240;
+                btnExport.Left = searchPanel.Width - 120;
+            };
+
+            mainPanel.Resize += (s, e) =>
+            {
+                searchPanel.Width = mainPanel.Width - 40;
+            };
+
             searchPanel.Controls.AddRange(new Control[] { txtSearch, btnSearch, btnExport });
 
-            // Data GridView
+            // ✅ FIXED: Data GridView - positioned below search panel
             DataGridView dgvVoters = new DataGridView
             {
                 Name = "dgvVoters",
-                Location = new Point(20, 100),
-                Size = new Size(pnlMainContent.Width - 60, pnlMainContent.Height - 150),
+                Location = new Point(0, 70),
+                Size = new Size(mainPanel.Width - 40, mainPanel.Height - 90),
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 ReadOnly = true,
@@ -1257,6 +1271,14 @@ Admin Remarks:
             };
             dgvVoters.Columns.Add(btnActions);
 
+            // ✅ FIXED: Handle main panel resize to update DataGridView size
+            mainPanel.Resize += (s, e) =>
+            {
+                searchPanel.Width = mainPanel.Width - 40;
+                dgvVoters.Width = mainPanel.Width - 40;
+                dgvVoters.Height = mainPanel.Height - 90;
+            };
+
             // Connect events
             btnSearch.Click += async (s, e) => await LoadVotersAsync(dgvVoters, txtSearch.Text);
             btnExport.Click += (s, e) => ExportVotersToCSV(dgvVoters);
@@ -1278,7 +1300,6 @@ Admin Remarks:
                 dgv.Rows.Clear();
                 Cursor = Cursors.WaitCursor;
 
-                // ✅ FIXED: Use detailed voters endpoint
                 var response = await _client.GetAsync("api/admin/voters-detailed");
 
                 if (response.IsSuccessStatusCode)
@@ -1401,8 +1422,16 @@ Admin Remarks:
                     MessageBox.Show(message, "Success",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // Refresh voter list
-                    await LoadVotersAsync((DataGridView)pnlMainContent.Controls[0].Controls[1], "");
+                    // Refresh voter list - find the DataGridView in the panel
+                    var mainPanel = pnlMainContent.Controls[0] as Panel;
+                    if (mainPanel != null)
+                    {
+                        var dgv = mainPanel.Controls.OfType<DataGridView>().FirstOrDefault();
+                        if (dgv != null)
+                        {
+                            await LoadVotersAsync(dgv, "");
+                        }
+                    }
                 }
             }
             catch (Exception ex)
