@@ -1,0 +1,22 @@
+using System;
+
+namespace Election.UI
+{
+    public static class UserSession
+    {
+        public static string Username { get; set; } = "";
+        public static string Email { get; set; } = "";
+        public static string Role { get; set; } = "";
+        public static string Token { get; set; } = "DEMO_TOKEN"; // Mock token since API isn't JWT-based yet
+
+        public static void Clear()
+        {
+            Username = "";
+            Email = "";
+            Role = "";
+            Token = ""; 
+        }
+
+        public static bool IsLoggedIn => !string.IsNullOrEmpty(Username);
+    }
+}

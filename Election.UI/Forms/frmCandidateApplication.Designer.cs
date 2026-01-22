@@ -1,6 +1,6 @@
 ﻿namespace Election.UI.Forms
 {
-    partial class frmCandidateApplication
+    partial class FrmCandidateApplication
     {
         /// <summary>
         /// Required designer variable.
@@ -144,7 +144,7 @@
             // 
             lblMainTitle.AutoSize = true;
             lblMainTitle.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblMainTitle.Location = new Point(287, 20);
+            lblMainTitle.Location = new Point(375, 22);
             lblMainTitle.Name = "lblMainTitle";
             lblMainTitle.Size = new Size(361, 25);
             lblMainTitle.TabIndex = 0;
@@ -154,7 +154,7 @@
             // 
             lblStep1.AutoSize = true;
             lblStep1.Font = new Font("Segoe UI Semibold", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblStep1.Location = new Point(287, 92);
+            lblStep1.Location = new Point(42, 80);
             lblStep1.Name = "lblStep1";
             lblStep1.Size = new Size(166, 25);
             lblStep1.TabIndex = 1;
@@ -162,7 +162,7 @@
             // 
             // txtFullName
             // 
-            txtFullName.Location = new Point(288, 147);
+            txtFullName.Location = new Point(42, 131);
             txtFullName.Multiline = true;
             txtFullName.Name = "txtFullName";
             txtFullName.PlaceholderText = "FullName";
@@ -171,7 +171,7 @@
             // 
             // txtAge
             // 
-            txtAge.Location = new Point(287, 201);
+            txtAge.Location = new Point(42, 190);
             txtAge.Multiline = true;
             txtAge.Name = "txtAge";
             txtAge.PlaceholderText = "Age";
@@ -180,7 +180,7 @@
             // 
             // textRegion
             // 
-            textRegion.Location = new Point(287, 253);
+            textRegion.Location = new Point(42, 253);
             textRegion.Multiline = true;
             textRegion.Name = "textRegion";
             textRegion.PlaceholderText = "Region";
@@ -191,7 +191,7 @@
             // 
             lblStep2.AutoSize = true;
             lblStep2.Font = new Font("Segoe UI Semibold", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblStep2.Location = new Point(287, 319);
+            lblStep2.Location = new Point(131, 304);
             lblStep2.Name = "lblStep2";
             lblStep2.Size = new Size(181, 25);
             lblStep2.TabIndex = 8;
@@ -211,7 +211,7 @@
             lblUploadPhoto.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblUploadPhoto.AutoSize = true;
             lblUploadPhoto.Font = new Font("Segoe UI Semibold", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblUploadPhoto.Location = new Point(731, 319);
+            lblUploadPhoto.Location = new Point(818, 319);
             lblUploadPhoto.Name = "lblUploadPhoto";
             lblUploadPhoto.Size = new Size(129, 25);
             lblUploadPhoto.TabIndex = 10;
@@ -241,7 +241,6 @@
             pnlMain.Name = "pnlMain";
             pnlMain.Size = new Size(1137, 670);
             pnlMain.TabIndex = 1;
-            pnlMain.Paint += pnlMain_Paint;
             // 
             // btnSubmit
             // 
@@ -285,7 +284,7 @@
             picCameraIcon.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             picCameraIcon.BackgroundImage = Properties.Resources.image_icon;
             picCameraIcon.BackgroundImageLayout = ImageLayout.Stretch;
-            picCameraIcon.Location = new Point(654, 319);
+            picCameraIcon.Location = new Point(741, 319);
             picCameraIcon.Name = "picCameraIcon";
             picCameraIcon.Size = new Size(71, 50);
             picCameraIcon.TabIndex = 16;
@@ -296,7 +295,7 @@
             btnUploadFile.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btnUploadFile.BackColor = Color.White;
             btnUploadFile.ForeColor = Color.DeepSkyBlue;
-            btnUploadFile.Location = new Point(584, 560);
+            btnUploadFile.Location = new Point(363, 516);
             btnUploadFile.Name = "btnUploadFile";
             btnUploadFile.Size = new Size(134, 38);
             btnUploadFile.TabIndex = 15;
@@ -306,7 +305,7 @@
             // txtManifesto
             // 
             txtManifesto.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
-            txtManifesto.Location = new Point(253, 363);
+            txtManifesto.Location = new Point(32, 363);
             txtManifesto.Multiline = true;
             txtManifesto.Name = "txtManifesto";
             txtManifesto.Size = new Size(465, 191);
@@ -315,7 +314,7 @@
             // textPhone
             // 
             textPhone.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            textPhone.Location = new Point(462, 262);
+            textPhone.Location = new Point(679, 253);
             textPhone.Multiline = true;
             textPhone.Name = "textPhone";
             textPhone.PlaceholderText = "Phone";
@@ -325,7 +324,7 @@
             // textEmail
             // 
             textEmail.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            textEmail.Location = new Point(462, 201);
+            textEmail.Location = new Point(679, 203);
             textEmail.Multiline = true;
             textEmail.Name = "textEmail";
             textEmail.PlaceholderText = "Email";
@@ -335,14 +334,14 @@
             // textparty
             // 
             textparty.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            textparty.Location = new Point(462, 147);
+            textparty.Location = new Point(679, 147);
             textparty.Multiline = true;
             textparty.Name = "textparty";
             textparty.PlaceholderText = "party/Affilation";
             textparty.Size = new Size(361, 34);
             textparty.TabIndex = 11;
             // 
-            // frmCandidateApplication
+            // FrmCandidateApplication
             // 
             AutoScaleDimensions = new SizeF(9F, 21F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -352,10 +351,9 @@
             Controls.Add(pnlHeader);
             Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
             Margin = new Padding(4);
-            Name = "frmCandidateApplication";
+            Name = "FrmCandidateApplication";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Candidate Application - Election System";
-            Load += frmCandidateApplication_Load;
             pnlHeader.ResumeLayout(false);
             pnlHeader.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();

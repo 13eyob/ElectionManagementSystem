@@ -1,6 +1,6 @@
 ﻿namespace Election.UI.Forms
 {
-    partial class frmCandidateProfile
+    partial class FrmCandidateProfile
     {
         private System.ComponentModel.IContainer components = null;
         private Label lblTitle;
@@ -98,7 +98,7 @@
             panelMain.Name = "panelMain";
             panelMain.Size = new Size(500, 350);
             panelMain.TabIndex = 1;
-          
+            panelMain.Paint += panelMain_Paint;
             // 
             // lblDateValue
             // 
@@ -304,7 +304,7 @@
             btnUpdate.UseVisualStyleBackColor = false;
             btnUpdate.Click += BtnUpdate_Click;
             // 
-            // frmCandidateProfile
+            // FrmCandidateProfile
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -316,10 +316,10 @@
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            Name = "frmCandidateProfile";
+            Name = "FrmCandidateProfile";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "My Candidate Profile";
-            Load += frmCandidateProfile_Load;
+            Load += FrmCandidateProfile_Load;
             panelMain.ResumeLayout(false);
             panelMain.PerformLayout();
             panelButtons.ResumeLayout(false);

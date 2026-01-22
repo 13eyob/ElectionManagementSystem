@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Net.Http;
@@ -6,162 +8,188 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace Election.UI.Forms
 {
-    public partial class frmAdminDashboard : Form
+    public partial class FrmAdminDashboard : Form
     {
+        #region Fields and Properties
         private readonly HttpClient _client;
-        private Panel _selectedPanel = null;
-        private TabControl _tabControl;
-        private DataGridView _dgvAllCandidates;
-        private DataGridView _dgvApprovedCandidates;
-        private DataGridView _dgvPendingCandidates;
-        private DataGridView _dgvRejectedCandidates;
-        private DataGridView _dgvCandidateUsers;
-        private Label[] _statValueLabels = new Label[6];
+        private Panel? _selectedPanel = null;
 
-        // Track previous window size for responsive adjustments
+        // Dashboard statistics labels - 7 CARDS
+        private readonly Label[] _statValueLabels = new Label[7];
+        private readonly Panel[] _statCards = new Panel[7];
+
+        // Session management
+        private System.Windows.Forms.Timer? _sessionTimer;
+        private int _inactiveMinutes;
+        private bool _isResizing;
         private Size _previousSize;
-        private bool _isResizing = false;
 
-        public frmAdminDashboard()
+        // Color scheme
+        private static readonly Color COLOR_PRIMARY = Color.FromArgb(15, 22, 40);
+        private static readonly Color COLOR_SECONDARY = Color.FromArgb(21, 101, 192);
+        private static readonly Color COLOR_SUCCESS = Color.FromArgb(46, 125, 50);
+        private static readonly Color COLOR_WARNING = Color.FromArgb(245, 124, 0);
+        private static readonly Color COLOR_DANGER = Color.FromArgb(244, 67, 54);
+        private static readonly string[] _userRoles = ["All Roles", "Voter", "Candidate", "Admin"];
+        private static readonly string[] _userStatus = ["All Status", "Active", "Disabled"];
+
+        private static readonly Color COLOR_INFO = Color.FromArgb(123, 31, 162);
+        private static readonly Color COLOR_LIGHT = Color.FromArgb(245, 247, 250);
+        private static readonly Color COLOR_DARK = Color.FromArgb(33, 43, 53);
+
+        private static readonly string[] CardTitles =
+        [
+            "👥 Total Users", "🧑 Total Voters", "🎯 Total Candidates",
+            "🗳️ Total Votes", "✅ Approved", "⏳ Pending", "❌ Rejected"
+        ];
+
+        private static readonly Color[] CardColors =
+        [
+            Color.FromArgb(123, 31, 162),  // INFO
+            Color.FromArgb(21, 101, 192),  // SECONDARY
+            Color.FromArgb(46, 125, 50),   // SUCCESS
+            Color.FromArgb(245, 124, 0),    // WARNING
+            Color.FromArgb(0, 150, 136),   // Teal
+            Color.FromArgb(255, 193, 7),    // Amber
+            Color.FromArgb(198, 40, 40)    // DANGER
+        ];
+        #endregion
+
+        #region Constructor
+        public FrmAdminDashboard()
         {
             InitializeComponent();
 
-            // Track initial size
-            _previousSize = this.Size;
+            // Initialize
+            _previousSize = Size;
+            MinimumSize = new(1000, 700);
 
-            // Set form properties
-            this.MaximizeBox = true;
-            this.MinimizeBox = true;
-            this.FormBorderStyle = FormBorderStyle.Sizable;
-            this.MinimumSize = new Size(900, 600);
-
-            // Initialize HttpClient
-            _client = new HttpClient
+            // Setup HttpClient
+            _client = new()
             {
-                BaseAddress = new Uri("https://localhost:7208"),
+                BaseAddress = new("https://localhost:7208"),
                 Timeout = TimeSpan.FromSeconds(30)
             };
+
+            // Add authorization header
+            if (!string.IsNullOrEmpty(UserSession.Token))
+            {
+                _client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", UserSession.Token);
+            }
 
             // Connect event handlers
             ConnectEventHandlers();
 
+            // Setup session timer
+            InitializeSessionTimer();
+
             // Set default view
             ShowDashboardView();
         }
+        #endregion
 
+        #region Initialization Methods
         private void ConnectEventHandlers()
         {
             // Form events
-            this.Load += frmAdminDashboard_Load;
-            this.FormClosing += FrmAdminDashboard_FormClosing;
-            this.Resize += FrmAdminDashboard_Resize;
-            this.ResizeBegin += FrmAdminDashboard_ResizeBegin;
-            this.ResizeEnd += FrmAdminDashboard_ResizeEnd;
+            Load += FrmAdminDashboard_Load;
+            FormClosing += FrmAdminDashboard_FormClosing;
+            Resize += FrmAdminDashboard_Resize;
+            ResizeBegin += FrmAdminDashboard_ResizeBegin;
+            ResizeEnd += FrmAdminDashboard_ResizeEnd;
 
-            // Button events
+            // Mouse/keyboard activity resets timer
+            MouseMove += (s, e) => ResetSessionTimer();
+            KeyPress += (s, e) => ResetSessionTimer();
+
+            // Header buttons
             btnLogout.Click += BtnLogout_Click;
-            button1.Click += BtnLogout_Click;
             btnRefresh.Click += BtnRefresh_Click;
 
-            // Link events
-            lnkHome.Click += LnkHome_Click;
-            lnkMyProfile.Click += LnkMyProfile_Click;
-
-            // Sidebar panels
-            MakePanelClickable(panelhome, PanelHome_Click);
-            MakePanelClickable(panelcandidate, PanelCandidate_Click);
-            MakePanelClickable(panelvoters, PanelVoters_Click);
-            MakePanelClickable(panelresult, PanelResult_Click);
-            MakePanelClickable(panelstart, PanelStart_Click);
+            // Sidebar navigation
+            MakePanelClickable(panelDashboard, PanelDashboard_Click);
+            MakePanelClickable(panelCandidate, PanelCandidate_Click);
+            MakePanelClickable(panelUserManagement, PanelUserManagement_Click);
+            MakePanelClickable(panelVoteMonitoring, PanelVoteMonitoring_Click);
+            MakePanelClickable(panelElectionControl, PanelElectionControl_Click);
+            MakePanelClickable(panelResults, PanelResults_Click);
         }
+
+        private void InitializeSessionTimer()
+        {
+            _sessionTimer = new System.Windows.Forms.Timer { Interval = 60000 }; // 1 minute
+            _sessionTimer.Tick += (s, e) =>
+            {
+                _inactiveMinutes++;
+                if (_inactiveMinutes >= 15) // 15 minutes inactivity
+                {
+                    _sessionTimer.Stop();
+                    MessageBox.Show("Session expired due to inactivity. Please login again.",
+                        "Auto Logout", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    Logout();
+                }
+            };
+            _sessionTimer.Start();
+        }
+
+        private void ResetSessionTimer() => _inactiveMinutes = 0;
+        #endregion
 
         #region Responsive Layout Methods
-        private void FrmAdminDashboard_ResizeBegin(object sender, EventArgs e)
-        {
-            _isResizing = true;
-        }
+        private void FrmAdminDashboard_ResizeBegin(object? sender, EventArgs e) => _isResizing = true;
 
-        private void FrmAdminDashboard_ResizeEnd(object sender, EventArgs e)
+        private void FrmAdminDashboard_ResizeEnd(object? sender, EventArgs e)
         {
             _isResizing = false;
             AdjustLayoutForSize();
         }
 
-        private void FrmAdminDashboard_Resize(object sender, EventArgs e)
+        private void FrmAdminDashboard_Resize(object? sender, EventArgs e)
         {
             if (!_isResizing) return;
-
             AdjustLayoutForSize();
-            _previousSize = this.Size;
+            _previousSize = Size;
         }
 
         private void AdjustLayoutForSize()
         {
             try
             {
-                // Update main content panel size and position
                 pnlMainContent.SuspendLayout();
 
+                // Calculate positions
                 int sidebarWidth = panel1.Width;
                 int headerHeight = pnlHeader.Height;
-                int adminLabelHeight = 35; // Approximate height of admin label
-
-                // Calculate available space
-                int availableWidth = this.ClientSize.Width - sidebarWidth;
-                int availableHeight = this.ClientSize.Height - headerHeight - adminLabelHeight;
+                int adminLabelHeight = 40;
 
                 // Update main content panel
-                pnlMainContent.Location = new Point(sidebarWidth, headerHeight + adminLabelHeight);
-                pnlMainContent.Size = new Size(availableWidth, availableHeight);
+                pnlMainContent.Location = new(sidebarWidth, headerHeight + adminLabelHeight);
+                pnlMainContent.Size = new(
+                    ClientSize.Width - sidebarWidth,
+                    ClientSize.Height - headerHeight - adminLabelHeight
+                );
 
-                // Center the admin label
-                labeladmin.Left = (this.ClientSize.Width - labeladmin.Width) / 2;
+                // Center admin label
+                labeladmin.Left = (ClientSize.Width - labeladmin.Width) / 2;
                 labeladmin.Top = headerHeight + 5;
 
-                // Update DataGridView if visible
-                if (dgvCandidates.Visible)
-                {
-                    dgvCandidates.Location = new Point(20, 70);
-                    dgvCandidates.Size = new Size(pnlMainContent.Width - 40, pnlMainContent.Height - 90);
-                }
+                // Update sidebar height
+                panel1.Height = ClientSize.Height - pnlHeader.Height;
 
-                // Update refresh button position
-                btnRefresh.Left = pnlMainContent.Width - btnRefresh.Width - 20;
-                btnRefresh.Top = 20;
-
-                // Update title position
-                lblCandidatesTitle.Left = 20;
-                lblCandidatesTitle.Top = 20;
-
-                // Update logout button in header
-                btnLogout.Left = pnlHeader.Width - btnLogout.Width - 20;
-                btnLogout.Top = (pnlHeader.Height - btnLogout.Height) / 2;
-
-                // Update links in header
-                lnkHome.Left = btnLogout.Left - lnkHome.Width - 30;
-                lnkHome.Top = (pnlHeader.Height - lnkHome.Height) / 2;
-
-                lnkMyProfile.Left = lnkHome.Left - lnkMyProfile.Width - 20;
-                lnkMyProfile.Top = (pnlHeader.Height - lnkMyProfile.Height) / 2;
-
-                // Adjust sidebar height
-                panel1.Height = this.ClientSize.Height - pnlHeader.Height;
+                // Update election status position
+                lblElectionStatusHeader.Left = ClientSize.Width - 300;
 
                 pnlMainContent.ResumeLayout();
 
-                // Force a refresh of custom content
-                if (_tabControl != null && _tabControl.Visible)
+                // Adjust dashboard statistics if visible
+                if (_statCards[0] != null && _statCards[0].Visible)
                 {
-                    _tabControl.Size = new Size(pnlMainContent.Width, pnlMainContent.Height - 100);
-                }
-
-                // Refresh statistics layout if visible
-                if (_statValueLabels[0] != null && _statValueLabels[0].Visible)
-                {
-                    AdjustStatisticsLayout();
+                    AdjustDashboardLayout();
                 }
             }
             catch (Exception ex)
@@ -170,82 +198,29 @@ namespace Election.UI.Forms
             }
         }
 
-        private void AdjustStatisticsLayout()
+        private void AdjustDashboardLayout()
         {
             try
             {
-                var statsPanel = pnlMainContent.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
-                if (statsPanel != null)
+                // Find stats container (now a TableLayoutPanel)
+                var statsContainer = pnlMainContent.Controls.OfType<Panel>()
+                    .SelectMany(p => p.Controls.OfType<TableLayoutPanel>())
+                    .FirstOrDefault();
+
+                if (statsContainer != null)
                 {
-                    int availableWidth = pnlMainContent.Width - 40;
-
-                    // Calculate optimal card width
-                    int cardWidth = 160;
-                    int cardsPerRow = Math.Max(1, availableWidth / (cardWidth + 20));
-                    int totalWidth = cardsPerRow * (cardWidth + 10);
-
-                    statsPanel.Size = new Size(totalWidth, 150);
-                    statsPanel.Left = (pnlMainContent.Width - totalWidth) / 2;
+                    statsContainer.Width = pnlMainContent.Width - 60;
                 }
             }
-            catch
-            {
-                // Silently fail if statistics panel doesn't exist
-            }
-        }
-
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-        {
-            // Alt + F4 for close
-            if (keyData == (Keys.Alt | Keys.F4))
-            {
-                this.Close();
-                return true;
-            }
-
-            // Ctrl + R for refresh
-            if (keyData == (Keys.Control | Keys.R))
-            {
-                RefreshCurrentView();
-                return true;
-            }
-
-            // Ctrl + M for maximize/restore
-            if (keyData == (Keys.Control | Keys.M))
-            {
-                ToggleMaximize();
-                return true;
-            }
-
-            // Ctrl + Shift + M for minimize
-            if (keyData == (Keys.Control | Keys.Shift | Keys.M))
-            {
-                this.WindowState = FormWindowState.Minimized;
-                return true;
-            }
-
-            return base.ProcessCmdKey(ref msg, keyData);
-        }
-
-        private void ToggleMaximize()
-        {
-            if (this.WindowState == FormWindowState.Maximized)
-            {
-                this.WindowState = FormWindowState.Normal;
-            }
-            else
-            {
-                this.WindowState = FormWindowState.Maximized;
-            }
+            catch { /* Ignore layout errors */ }
         }
         #endregion
 
-        #region UI Interaction Methods
-        private void MakePanelClickable(Panel panel, EventHandler clickHandler)
+        #region Navigation Methods
+        private static void MakePanelClickable(Panel panel, EventHandler clickHandler)
         {
             panel.Cursor = Cursors.Hand;
             panel.Click += clickHandler;
-
             foreach (Control control in panel.Controls)
             {
                 control.Cursor = Cursors.Hand;
@@ -256,9 +231,7 @@ namespace Election.UI.Forms
         private void HighlightPanel(Panel panel)
         {
             if (_selectedPanel != null && _selectedPanel != panel)
-            {
                 ResetPanelAppearance(_selectedPanel);
-            }
 
             if (panel != null)
             {
@@ -267,43 +240,37 @@ namespace Election.UI.Forms
             }
         }
 
-        private void ResetPanelAppearance(Panel panel)
+        private static void ResetPanelAppearance(Panel panel)
         {
-            panel.BackColor = Color.FromArgb(15, 22, 40);
-
+            panel.BackColor = COLOR_PRIMARY;
             foreach (Control control in panel.Controls)
             {
                 if (control is Label label)
                 {
-                    label.BackColor = Color.FromArgb(15, 22, 40);
+                    label.BackColor = COLOR_PRIMARY;
                     label.ForeColor = Color.White;
                 }
                 else if (control is PictureBox pictureBox)
-                {
-                    pictureBox.BackColor = Color.FromArgb(15, 22, 40);
-                }
+                    pictureBox.BackColor = COLOR_PRIMARY;
             }
         }
 
-        private void SetActivePanelAppearance(Panel panel)
+        private static void SetActivePanelAppearance(Panel panel)
         {
-            panel.BackColor = Color.FromArgb(30, 40, 70);
-
+            panel.BackColor = COLOR_SECONDARY;
             foreach (Control control in panel.Controls)
             {
                 if (control is Label label)
                 {
-                    label.BackColor = Color.FromArgb(30, 40, 70);
+                    label.BackColor = COLOR_SECONDARY;
                     label.ForeColor = Color.LightSkyBlue;
                 }
                 else if (control is PictureBox pictureBox)
-                {
-                    pictureBox.BackColor = Color.FromArgb(30, 40, 70);
-                }
+                    pictureBox.BackColor = COLOR_SECONDARY;
             }
         }
 
-        private void frmAdminDashboard_Load(object sender, EventArgs e)
+        private void FrmAdminDashboard_Load(object? sender, EventArgs e)
         {
             if (UserSession.IsLoggedIn)
             {
@@ -311,85 +278,83 @@ namespace Election.UI.Forms
                 labeladmin.Text = $"Welcome Administrator: {UserSession.Username}";
             }
 
-            HighlightPanel(panelhome);
-
-            // Perform initial layout adjustment
+            HighlightPanel(panelDashboard);
             AdjustLayoutForSize();
+
+            // Load initial election status
+            _ = UpdateElectionStatusHeaderAsync();
         }
 
-        private void FrmAdminDashboard_FormClosing(object sender, FormClosingEventArgs e)
+        private void FrmAdminDashboard_FormClosing(object? sender, FormClosingEventArgs e)
         {
-            CleanupResources();
-        }
-
-        private void CleanupResources()
-        {
-            try
-            {
-                // Remove event handlers
-                if (_tabControl != null)
-                {
-                    _tabControl.SelectedIndexChanged -= TabControl_SelectedIndexChanged;
-                }
-
-                // Dispose HttpClient
-                _client?.Dispose();
-
-                // Clear main content
-                ClearMainContent();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Cleanup error: {ex.Message}");
-            }
+            _sessionTimer?.Stop();
+            _client?.Dispose();
         }
         #endregion
 
-        #region Navigation
-        private void PanelHome_Click(object sender, EventArgs e)
+        #region Navigation Events
+        private void PanelDashboard_Click(object? sender, EventArgs e)
         {
-            HighlightPanel(panelhome);
+            HighlightPanel(panelDashboard);
             ShowDashboardView();
         }
 
-        private void PanelCandidate_Click(object sender, EventArgs e)
+        private void PanelCandidate_Click(object? sender, EventArgs e)
         {
-            HighlightPanel(panelcandidate);
-            ShowCandidateAdminDashboard();
+            HighlightPanel(panelCandidate);
+            ShowCandidateManagementView();
         }
 
-        private void PanelVoters_Click(object sender, EventArgs e)
+        private void PanelUserManagement_Click(object? sender, EventArgs e)
         {
-            HighlightPanel(panelvoters);
-            ShowVoterManagementView();
+            HighlightPanel(panelUserManagement);
+            ShowUserManagementView();
         }
 
-        private void PanelResult_Click(object sender, EventArgs e)
+        private void PanelVoteMonitoring_Click(object? sender, EventArgs e)
         {
-            HighlightPanel(panelresult);
-            ShowResultsView();
+            HighlightPanel(panelVoteMonitoring);
+            ShowVoteMonitoringView();
         }
 
-        private void PanelStart_Click(object sender, EventArgs e)
+        private void PanelElectionControl_Click(object? sender, EventArgs e)
         {
-            HighlightPanel(panelstart);
+            HighlightPanel(panelElectionControl);
             ShowElectionControlView();
         }
 
-        private void BtnRefresh_Click(object sender, EventArgs e)
+        private void PanelResults_Click(object? sender, EventArgs e)
         {
-            RefreshCurrentView();
+            HighlightPanel(panelResults);
+            ShowResultsView();
         }
 
-        private void LnkHome_Click(object sender, EventArgs e)
-        {
-            PanelHome_Click(sender, e);
-        }
+        private void PanelLogout_Click(object? sender, EventArgs e) => BtnLogout_Click(sender, e);
 
-        private void LnkMyProfile_Click(object sender, EventArgs e)
+        private void BtnRefresh_Click(object? sender, EventArgs e) => RefreshCurrentView();
+
+        private async Task UpdateElectionStatusHeaderAsync()
         {
-            MessageBox.Show("Admin profile feature coming soon!",
-                "My Profile", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                var response = await _client.GetAsync("api/admin/election-status");
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                    bool isActive = result.GetProperty("isActive").GetBoolean();
+                    bool votingOpen = result.GetProperty("votingOpen").GetBoolean();
+
+                    lblElectionStatusHeader.Text = isActive
+                        ? (votingOpen ? "✅ Election Active" : "⏸ Election Paused")
+                        : "⏸ Election Inactive";
+                    lblElectionStatusHeader.ForeColor = isActive ? COLOR_SUCCESS : COLOR_WARNING;
+                }
+            }
+            catch
+            {
+                lblElectionStatusHeader.Text = "❌ Status Error";
+                lblElectionStatusHeader.ForeColor = COLOR_DANGER;
+            }
         }
         #endregion
 
@@ -402,49 +367,56 @@ namespace Election.UI.Forms
             AdjustLayoutForSize();
         }
 
-        private void ShowCandidateAdminDashboard()
+        private void ShowCandidateManagementView()
         {
             ClearMainContent();
-            lblCandidatesTitle.Text = "👥 CANDIDATE ADMIN DASHBOARD";
-            CreateCandidateAdminDashboard();
+            lblCandidatesTitle.Text = "🎯 CANDIDATE MANAGEMENT";
+            CreateCandidateManagementPanel();
             AdjustLayoutForSize();
         }
 
-        private void ShowVoterManagementView()
+        private void ShowUserManagementView()
         {
             ClearMainContent();
-            lblCandidatesTitle.Text = "👤 VOTER MANAGEMENT";
-            CreateVoterManagementPanel();
+            lblCandidatesTitle.Visible = false; // Hide header to save space
+            lblCandidatesTitle.Text = "🧑 USER MANAGEMENT";
+            CreateUserManagementPanel();
             AdjustLayoutForSize();
         }
 
-        private void ShowResultsView()
+        private void ShowVoteMonitoringView()
         {
             ClearMainContent();
-            lblCandidatesTitle.Text = "📊 ELECTION RESULTS";
-            CreateResultsPanel();
+            lblCandidatesTitle.Text = "🗳️ VOTE MONITORING";
+            CreateVoteMonitoringPanel();
             AdjustLayoutForSize();
         }
 
         private void ShowElectionControlView()
         {
             ClearMainContent();
-            lblCandidatesTitle.Text = "⚡ ELECTION CONTROL";
+            lblCandidatesTitle.Text = "⚙️ ELECTION CONTROL";
             CreateElectionControlPanel();
+            AdjustLayoutForSize();
+        }
+
+        private void ShowResultsView()
+        {
+            ClearMainContent();
+            lblCandidatesTitle.Visible = false; // Hide header to avoid duplicate title
+            lblCandidatesTitle.Text = "📊 ELECTION RESULTS";
+            CreateResultsPanel();
             AdjustLayoutForSize();
         }
 
         private void ClearMainContent()
         {
-            // Remove all controls except the title and refresh button
             var controlsToRemove = pnlMainContent.Controls.Cast<Control>()
                 .Where(c => c != lblCandidatesTitle && c != btnRefresh && c != dgvCandidates)
                 .ToList();
 
             foreach (var control in controlsToRemove)
-            {
                 control.Dispose();
-            }
 
             lblCandidatesTitle.Visible = true;
             btnRefresh.Visible = true;
@@ -453,451 +425,530 @@ namespace Election.UI.Forms
 
         private void RefreshCurrentView()
         {
-            if (_selectedPanel == panelhome)
-            {
-                ShowDashboardView();
-            }
-            else if (_selectedPanel == panelcandidate)
-            {
-                ShowCandidateAdminDashboard();
-            }
-            else if (_selectedPanel == panelvoters)
-            {
-                ShowVoterManagementView();
-            }
-            else if (_selectedPanel == panelresult)
-            {
-                ShowResultsView();
-            }
-            else if (_selectedPanel == panelstart)
-            {
-                ShowElectionControlView();
-            }
+            if (_selectedPanel == panelDashboard) ShowDashboardView();
+            else if (_selectedPanel == panelCandidate) ShowCandidateManagementView();
+            else if (_selectedPanel == panelUserManagement) ShowUserManagementView();
+            else if (_selectedPanel == panelVoteMonitoring) ShowVoteMonitoringView();
+            else if (_selectedPanel == panelElectionControl) ShowElectionControlView();
+            else if (_selectedPanel == panelResults) ShowResultsView();
         }
         #endregion
 
-        #region Dashboard Statistics
+        #region Dashboard Statistics - FIXED: Shows actual numbers
         private void CreateDashboardStatistics()
         {
-            Panel mainPanel = new Panel
+            Panel mainPanel = new()
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(20)
+                BackColor = COLOR_LIGHT,
+                Padding = new(20)
             };
 
-            Label lblTitle = new Label
+            TableLayoutPanel statsContainer = new()
             {
-                Text = "📊 ELECTION STATISTICS",
-                Font = new Font("Times New Roman", 24, FontStyle.Bold),
-                ForeColor = Color.Navy,
-                Location = new Point(20, 20),
-                Size = new Size(500, 40)
+                Location = new(20, 80),
+                Size = new(mainPanel.Width - 60, 140),
+                ColumnCount = 7,
+                RowCount = 1,
+                Dock = DockStyle.Top,
+                Margin = new(0, 80, 0, 0)
             };
 
-            FlowLayoutPanel statsFlowPanel = new FlowLayoutPanel
-            {
-                Location = new Point(20, 80),
-                Size = new Size(1050, 150),
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
-                AutoScroll = false,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
+            for (int i = 0; i < 7; i++)
+                statsContainer.ColumnStyles.Add(new(SizeType.Percent, 14.28f));
 
-            string[] statLabels = { "Total Candidates", "Approved", "Pending", "Rejected", "Today", "This Week" };
-            string[] statIcons = { "👥", "✅", "⏳", "❌", "📅", "📆" };
+            statsContainer.RowStyles.Add(new(SizeType.Absolute, 130));
 
-            for (int i = 0; i < statLabels.Length; i++)
+            for (int i = 0; i < 7; i++)
             {
-                Panel card = CreateStatCard(statIcons[i], statLabels[i], "0", i);
-                statsFlowPanel.Controls.Add(card);
+                Panel card = CreateStatCard(CardTitles[i], "0", CardColors[i], i);
+                card.Dock = DockStyle.Fill;
+                statsContainer.Controls.Add(card, i, 0);
+                _statCards[i] = card;
             }
 
-            Label lblLoading = new Label
+            Label lblLoading = new()
             {
                 Text = "Loading statistics...",
-                Font = new Font("Segoe UI", 12),
-                Location = new Point(20, 250),
-                Size = new Size(400, 30),
+                Font = new("Segoe UI", 12),
+                Location = new(20, 300),
+                AutoSize = true,
                 ForeColor = Color.Gray
             };
 
-            mainPanel.Controls.Add(lblTitle);
-            mainPanel.Controls.Add(statsFlowPanel);
+            mainPanel.Controls.Add(statsContainer);
             mainPanel.Controls.Add(lblLoading);
             pnlMainContent.Controls.Add(mainPanel);
 
-            // Load statistics
-            LoadDashboardStatistics(lblLoading);
-
-            // Adjust layout
-            statsFlowPanel.Width = pnlMainContent.Width - 80;
+            _ = LoadDashboardStatisticsAsync(lblLoading);
         }
 
-        private Panel CreateStatCard(string icon, string label, string value, int index)
+        private Panel CreateStatCard(string title, string value, Color color, int index)
         {
-            Panel card = new Panel
+            Panel card = new()
             {
-                Size = new Size(160, 100),
-                Margin = new Padding(10),
+                Height = 120,
+                Margin = new(8),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            Label lblIcon = new Label
+            Label lblTitle = new()
             {
-                Text = icon,
-                Font = new Font("Segoe UI", 24, FontStyle.Bold),
-                Location = new Point(10, 15),
-                Size = new Size(50, 50),
+                Text = title,
+                Font = new("Segoe UI", 10, FontStyle.Regular),
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = Color.DarkGray,
+                Padding = new(0, 5, 0, 0)
+            };
+
+            _statValueLabels[index] = new()
+            {
+                Text = value,
+                Font = new("Segoe UI", 24, FontStyle.Bold),
+                Dock = DockStyle.Fill,
+                ForeColor = color,
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
-            _statValueLabels[index] = new Label
+            Panel bottomBorder = new()
             {
-                Text = value,
-                Font = new Font("Segoe UI", 20, FontStyle.Bold),
-                Location = new Point(70, 15),
-                Size = new Size(80, 40),
-                ForeColor = Color.Navy,
-                TextAlign = ContentAlignment.MiddleLeft
+                Size = new(card.Width, 5),
+                Location = new(0, card.Height - 5),
+                BackColor = color
             };
 
-            Label lblLabel = new Label
-            {
-                Text = label,
-                Font = new Font("Segoe UI", 9),
-                Location = new Point(70, 60),
-                Size = new Size(80, 30),
-                ForeColor = Color.Gray
-            };
-
-            card.Controls.Add(lblIcon);
+            card.Controls.Add(lblTitle);
             card.Controls.Add(_statValueLabels[index]);
-            card.Controls.Add(lblLabel);
+            card.Controls.Add(bottomBorder);
 
             return card;
         }
 
-        private async void LoadDashboardStatistics(Label lblLoading)
+        private async Task LoadDashboardStatisticsAsync(Label lblLoading)
         {
             try
             {
-                var response = await _client.GetAsync("api/candidate/statistics");
+                // Get dashboard statistics from API - FIXED PARSING
+                var response = await _client.GetAsync("api/admin/dashboard-statistics");
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<JsonElement>(responseString);
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-                    if (result.TryGetProperty("statistics", out var stats))
+                    // Check if response has success property
+                    if (result.TryGetProperty("success", out var success) && success.GetBoolean())
                     {
-                        this.Invoke((MethodInvoker)delegate
+                        // Check if statistics property exists
+                        if (result.TryGetProperty("statistics", out var stats))
                         {
-                            UpdateStatCards(stats);
-                            lblLoading.Visible = false;
-                        });
-                    }
-                }
-            }
-            catch
-            {
-                this.Invoke((MethodInvoker)delegate
-                {
-                    lblLoading.Text = "Error loading statistics";
-                    lblLoading.ForeColor = Color.Red;
-                });
-            }
-        }
+                            Invoke((MethodInvoker)delegate
+                            {
+                                try
+                                {
+                                    // Get EXACT properties - these names MUST match AdminController
+                                    int totalUsers = GetIntFromJson(stats, "TotalUsers");
+                                    int totalVoters = GetIntFromJson(stats, "TotalVoters");
+                                    int totalCandidates = GetIntFromJson(stats, "TotalCandidates");
+                                    int totalVotes = GetIntFromJson(stats, "TotalVotes");
+                                    int approvedCandidates = GetIntFromJson(stats, "ApprovedCandidates");
+                                    int pendingCandidates = GetIntFromJson(stats, "PendingCandidates");
+                                    int rejectedCandidates = GetIntFromJson(stats, "RejectedCandidates");
 
-        private void UpdateStatCards(JsonElement stats)
-        {
-            try
-            {
-                if (_statValueLabels[0] != null)
-                {
-                    _statValueLabels[0].Text = stats.GetProperty("totalCandidates").GetInt32().ToString();
-                    _statValueLabels[1].Text = stats.GetProperty("approvedCandidates").GetInt32().ToString();
-                    _statValueLabels[2].Text = stats.GetProperty("pendingCandidates").GetInt32().ToString();
-                    _statValueLabels[3].Text = stats.GetProperty("rejectedCandidates").GetInt32().ToString();
-                    _statValueLabels[4].Text = stats.GetProperty("todayRegistrations").GetInt32().ToString();
-                    _statValueLabels[5].Text = stats.GetProperty("thisWeekRegistrations").GetInt32().ToString();
-                }
-            }
-            catch
-            {
-                for (int i = 0; i < _statValueLabels.Length; i++)
-                {
-                    if (_statValueLabels[i] != null)
-                        _statValueLabels[i].Text = "N/A";
-                }
-            }
-        }
-        #endregion
+                                    // Update ALL 7 cards with actual numbers
+                                    _statValueLabels[0].Text = totalUsers.ToString("N0");
+                                    _statValueLabels[1].Text = totalVoters.ToString("N0");
+                                    _statValueLabels[2].Text = totalCandidates.ToString("N0");
+                                    _statValueLabels[3].Text = totalVotes.ToString("N0");
+                                    _statValueLabels[4].Text = approvedCandidates.ToString("N0");
+                                    _statValueLabels[5].Text = pendingCandidates.ToString("N0");
+                                    _statValueLabels[6].Text = rejectedCandidates.ToString("N0");
 
-        #region Candidate Admin Dashboard
-        private void CreateCandidateAdminDashboard()
-        {
-            ClearMainContent();
+                                    lblLoading.Visible = false;
 
-            Panel mainPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White
-            };
-
-            // Statistics panel
-            Panel statsPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 100,
-                BackColor = Color.FromArgb(240, 240, 240),
-                BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(10)
-            };
-
-            Label lblStatsTitle = new Label
-            {
-                Text = "Candidate Statistics",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                ForeColor = Color.Navy,
-                Location = new Point(10, 10),
-                Size = new Size(200, 30)
-            };
-
-            statsPanel.Controls.Add(lblStatsTitle);
-            mainPanel.Controls.Add(statsPanel);
-
-            // Tab control
-            _tabControl = new TabControl
-            {
-                Dock = DockStyle.Fill,
-                Location = new Point(0, 100),
-                Size = new Size(mainPanel.Width, mainPanel.Height - 100),
-                Appearance = TabAppearance.Normal,
-                ItemSize = new Size(120, 30),
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            // Add tabs
-            string[] tabNames = { "All Candidates", "✅ Approved", "⏳ Pending", "❌ Rejected", "👤 Users" };
-            string[] tabKeys = { "tabAll", "tabApproved", "tabPending", "tabRejected", "tabUsers" };
-
-            for (int i = 0; i < tabNames.Length; i++)
-            {
-                TabPage tab = new TabPage(tabNames[i])
-                {
-                    Name = tabKeys[i],
-                    BackColor = Color.White
-                };
-                _tabControl.TabPages.Add(tab);
-            }
-
-            // Create DataGridViews
-            CreateDataGridViewsForTabs();
-
-            _tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
-            mainPanel.Controls.Add(_tabControl);
-            pnlMainContent.Controls.Add(mainPanel);
-
-            // Load initial data
-            _ = LoadCurrentTabDataAsync();
-        }
-
-        private void CreateDataGridViewsForTabs()
-        {
-            _dgvAllCandidates = CreateCandidateDataGridView();
-            _dgvApprovedCandidates = CreateCandidateDataGridView();
-            _dgvPendingCandidates = CreateCandidateDataGridView();
-            _dgvRejectedCandidates = CreateCandidateDataGridView();
-            _dgvCandidateUsers = CreateUsersDataGridView();
-
-            _tabControl.TabPages["tabAll"].Controls.Add(_dgvAllCandidates);
-            _tabControl.TabPages["tabApproved"].Controls.Add(_dgvApprovedCandidates);
-            _tabControl.TabPages["tabPending"].Controls.Add(_dgvPendingCandidates);
-            _tabControl.TabPages["tabRejected"].Controls.Add(_dgvRejectedCandidates);
-            _tabControl.TabPages["tabUsers"].Controls.Add(_dgvCandidateUsers);
-        }
-
-        private DataGridView CreateCandidateDataGridView()
-        {
-            DataGridView dgv = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                ReadOnly = true,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                BackgroundColor = Color.White
-            };
-
-            // Add columns
-            dgv.Columns.Add("Id", "ID");
-            dgv.Columns.Add("FullName", "Full Name");
-            dgv.Columns.Add("Party", "Party");
-            dgv.Columns.Add("Region", "Region");
-            dgv.Columns.Add("Age", "Age");
-            dgv.Columns.Add("Email", "Email");
-            dgv.Columns.Add("Votes", "Votes");
-            dgv.Columns.Add("Status", "Status");
-            dgv.Columns.Add("Date", "Applied On");
-
-            // Action buttons
-            DataGridViewButtonColumn btnView = new DataGridViewButtonColumn
-            {
-                HeaderText = "View",
-                Text = "👁️ View",
-                UseColumnTextForButtonValue = true,
-                Name = "View",
-                Width = 80
-            };
-            dgv.Columns.Add(btnView);
-
-            DataGridViewButtonColumn btnActions = new DataGridViewButtonColumn
-            {
-                HeaderText = "Actions",
-                Text = "⚡ Actions",
-                UseColumnTextForButtonValue = true,
-                Name = "Actions",
-                Width = 100
-            };
-            dgv.Columns.Add(btnActions);
-
-            dgv.CellClick += DgvCandidates_CellClick;
-            dgv.CellFormatting += DgvCandidates_CellFormatting;
-
-            return dgv;
-        }
-
-        private DataGridView CreateUsersDataGridView()
-        {
-            DataGridView dgv = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                ReadOnly = true,
-                RowHeadersVisible = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                BackgroundColor = Color.White
-            };
-
-            dgv.Columns.Add("Id", "User ID");
-            dgv.Columns.Add("Username", "Username");
-            dgv.Columns.Add("Email", "Email");
-            dgv.Columns.Add("Role", "Role");
-            dgv.Columns.Add("Region", "Region");
-            dgv.Columns.Add("HasVoted", "Has Voted");
-            dgv.Columns.Add("RegisteredDate", "Registered Date");
-            dgv.Columns.Add("IsCandidate", "Is Candidate");
-
-            return dgv;
-        }
-
-        private async void TabControl_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            await LoadCurrentTabDataAsync();
-        }
-
-        private async Task LoadCurrentTabDataAsync()
-        {
-            if (_tabControl == null || _tabControl.SelectedTab == null)
-                return;
-
-            string selectedTab = _tabControl.SelectedTab.Name;
-
-            switch (selectedTab)
-            {
-                case "tabAll":
-                    await LoadCandidatesAsync(_dgvAllCandidates, "all");
-                    break;
-                case "tabApproved":
-                    await LoadCandidatesAsync(_dgvApprovedCandidates, "approved");
-                    break;
-                case "tabPending":
-                    await LoadCandidatesAsync(_dgvPendingCandidates, "pending");
-                    break;
-                case "tabRejected":
-                    await LoadCandidatesAsync(_dgvRejectedCandidates, "rejected");
-                    break;
-                case "tabUsers":
-                    await LoadCandidateUsersAsync(_dgvCandidateUsers);
-                    break;
-            }
-        }
-
-        private async Task LoadCandidatesAsync(DataGridView dgv, string endpoint)
-        {
-            try
-            {
-                dgv.SuspendLayout();
-                dgv.Rows.Clear();
-                Cursor = Cursors.WaitCursor;
-
-                string apiEndpoint = endpoint switch
-                {
-                    "pending" => "api/candidate/pending",
-                    "rejected" => "api/candidate/rejected",
-                    "approved" => "api/candidate/approved",
-                    _ => "api/candidate/all"
-                };
-
-                var response = await _client.GetAsync(apiEndpoint);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseString = await response.Content.ReadAsStringAsync();
-
-                    if (endpoint == "approved")
-                    {
-                        // Approved endpoint returns array directly
-                        var candidates = JsonSerializer.Deserialize<List<JsonElement>>(responseString);
-
-                        foreach (var candidate in candidates)
+                                    // Show success message
+                                    lblLoading.Text = "✅ Statistics loaded successfully!";
+                                    lblLoading.ForeColor = COLOR_SUCCESS;
+                                }
+                                catch (Exception ex)
+                                {
+                                    lblLoading.Text = $"JSON Parse Error: {ex.Message}";
+                                    lblLoading.ForeColor = COLOR_DANGER;
+                                }
+                            });
+                        }
+                        else
                         {
-                            dgv.Rows.Add(
-                                candidate.GetProperty("id").GetInt32(),
-                                candidate.GetProperty("name").GetString(),
-                                candidate.GetProperty("party").GetString(),
-                                candidate.GetProperty("region").GetString(),
-                                candidate.GetProperty("age").GetInt32(),
-                                0, // Votes - not available in this endpoint
-                                "✅ Approved",
-                                DateTime.Now.ToString("yyyy-MM-dd")
-                            );
+                            Invoke((MethodInvoker)delegate
+                            {
+                                lblLoading.Text = "❌ No 'statistics' property in response";
+                                lblLoading.ForeColor = COLOR_DANGER;
+                            });
                         }
                     }
                     else
                     {
-                        // Other endpoints return {success: true, candidates: [...]}
-                        var result = JsonSerializer.Deserialize<JsonElement>(responseString);
-
-                        if (result.TryGetProperty("candidates", out var candidatesArray))
+                        Invoke((MethodInvoker)delegate
                         {
-                            foreach (var candidate in candidatesArray.EnumerateArray())
-                            {
-                                string status = candidate.GetProperty("isApproved").GetBoolean()
-                                    ? "✅ Approved"
-                                    : candidate.TryGetProperty("status", out var statusProp)
-                                        ? statusProp.GetString() == "Rejected" ? "❌ Rejected" : "⏳ Pending"
-                                        : "⏳ Pending";
+                            lblLoading.Text = "❌ API returned success: false";
+                            lblLoading.ForeColor = COLOR_DANGER;
+                        });
+                    }
+                }
+                else
+                {
+                    Invoke((MethodInvoker)delegate
+                    {
+                        lblLoading.Text = $"❌ HTTP Error: {response.StatusCode}";
+                        lblLoading.ForeColor = COLOR_DANGER;
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Invoke((MethodInvoker)delegate
+                {
+                    lblLoading.Text = $"❌ Connection error: {ex.Message}";
+                    lblLoading.ForeColor = COLOR_DANGER;
+                });
+            }
+        }
 
-                                dgv.Rows.Add(
-                                    candidate.GetProperty("id").GetInt32(),
-                                    candidate.GetProperty("fullName").GetString(),
-                                    candidate.GetProperty("partyAffiliation").GetString(),
-                                    candidate.GetProperty("region").GetString(),
-                                    candidate.GetProperty("age").GetInt32(),
-                                    candidate.GetProperty("email").GetString(),
-                                    candidate.TryGetProperty("votesReceived", out var votes) ? votes.GetInt32() : 0,
-                                    status,
-                                    candidate.GetProperty("applicationDate").GetDateTime().ToString("yyyy-MM-dd")
-                                );
+        private static int GetIntFromJson(JsonElement element, string propertyName)
+        {
+            if (element.TryGetProperty(propertyName, out var prop))
+                return ParseJsonInt(prop);
+
+            string camelCaseName = char.ToLower(propertyName[0]) + propertyName[1..];
+            if (element.TryGetProperty(camelCaseName, out prop))
+                return ParseJsonInt(prop);
+
+            return 0;
+        }
+
+        private static int ParseJsonInt(JsonElement prop)
+        {
+            if (prop.ValueKind == JsonValueKind.Number)
+                return prop.GetInt32();
+            else if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out int value))
+                return value;
+            return 0;
+        }
+        #endregion
+
+        #region Candidate Management - UPDATED TO USE CandidateController
+        private void CreateCandidateManagementPanel()
+        {
+            Panel mainPanel = new()
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new(20, 15, 20, 15)
+            };
+
+            TableLayoutPanel filterPanel = new()
+            {
+                Height = 85,
+                Dock = DockStyle.Top,
+                BackColor = Color.FromArgb(240, 240, 240),
+                Padding = new(10, 5, 10, 5),
+                RowCount = 1
+            };
+            filterPanel.RowStyles.Add(new(SizeType.Percent, 100));
+            Label lblSearch = new()
+            {
+                Text = "Search Name:",
+                Font = new("Segoe UI", 10, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Dock = DockStyle.Fill
+            };
+
+            TextBox txtSearch = new()
+            {
+                Font = new("Segoe UI", 10),
+                Dock = DockStyle.Fill,
+                Margin = new(0, 5, 0, 0)
+            };
+
+            filterPanel.ColumnCount = 5;
+            filterPanel.ColumnStyles.Clear();
+            filterPanel.ColumnStyles.Add(new(SizeType.Absolute, 120));
+            filterPanel.ColumnStyles.Add(new(SizeType.Absolute, 150));
+            filterPanel.ColumnStyles.Add(new(SizeType.Absolute, 120));
+            filterPanel.ColumnStyles.Add(new(SizeType.Absolute, 200));
+            filterPanel.ColumnStyles.Add(new(SizeType.Percent, 100));
+
+            Label lblFilter = new()
+            {
+                Text = "Filter by Status:",
+                Font = new("Segoe UI", 10, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Dock = DockStyle.Fill
+            };
+
+            ComboBox cmbStatus = new()
+            {
+                Items = { "All Candidates", "Pending", "Approved", "Rejected" },
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new("Segoe UI", 10),
+                Dock = DockStyle.Fill,
+                Margin = new(0, 10, 0, 0)
+            };
+            cmbStatus.SelectedIndex = 0;
+
+            Panel spacerPanel = new() { Dock = DockStyle.Fill };
+
+            filterPanel.Controls.Clear();
+            filterPanel.Controls.Add(lblFilter, 0, 0);
+            filterPanel.Controls.Add(cmbStatus, 1, 0);
+            filterPanel.Controls.Add(lblSearch, 2, 0);
+            filterPanel.Controls.Add(txtSearch, 3, 0);
+            filterPanel.Controls.Add(spacerPanel, 4, 0);
+
+            Panel dgvContainer = new()
+            {
+                Dock = DockStyle.Fill,
+                Padding = new(0, 10, 0, 0)
+            };
+
+            DataGridView dgv = new()
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                BorderStyle = BorderStyle.None,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(240, 240, 240),
+                RowTemplate = { Height = 45 },
+                ColumnHeadersHeight = 45,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
+            };
+
+            dgv.ColumnHeadersDefaultCellStyle = new()
+            {
+                BackColor = COLOR_SECONDARY,
+                ForeColor = Color.White,
+                Font = new("Segoe UI", 10, FontStyle.Bold),
+                Alignment = DataGridViewContentAlignment.MiddleCenter,
+                Padding = new(0, 10, 0, 10)
+            };
+            dgv.EnableHeadersVisualStyles = false;
+
+            // Columns
+            dgv.Columns.Add("FullName", "👤 Candidate Name");
+            dgv.Columns.Add("Email", "📧 Email Address");
+            dgv.Columns.Add("Party", "🏛️ Political Party");
+            dgv.Columns.Add("Status", "📊 Status");
+            dgv.Columns.Add("ApplicationDate", "📅 Application Date");
+
+            // Set column widths
+            dgv.Columns["FullName"].Width = 140;
+            dgv.Columns["Email"].Width = 160;
+            dgv.Columns["Party"].Width = 100;
+            dgv.Columns["Status"].Width = 80;
+            dgv.Columns["ApplicationDate"].Width = 100;
+
+            // Action buttons
+            DataGridViewButtonColumn btnView = new()
+            {
+                Name = "btnView",
+                HeaderText = "🔍 View",
+                Text = "👁️ View",
+                UseColumnTextForButtonValue = true,
+                Width = 80,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            DataGridViewButtonColumn btnApprove = new()
+            {
+                Name = "btnApprove",
+                HeaderText = "✅ Appr.",
+                Text = "✅ Appr.",
+                UseColumnTextForButtonValue = true,
+                Width = 80,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            DataGridViewButtonColumn btnReject = new()
+            {
+                Name = "btnReject",
+                HeaderText = "❌ Rej.",
+                Text = "❌ Rej.",
+                UseColumnTextForButtonValue = true,
+                Width = 80,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            dgv.Columns.Add(btnView);
+            dgv.Columns.Add(btnApprove);
+            dgv.Columns.Add(btnReject);
+
+            // Button click handlers
+            dgv.CellClick += async (s, e) =>
+            {
+                if (e.RowIndex < 0 || s is not DataGridView dgvSender) return;
+
+                var columns = dgvSender.Columns;
+
+                int viewIndex = columns["btnView"]?.Index ?? -1;
+                int approveIndex = columns["btnApprove"]?.Index ?? -1;
+                int rejectIndex = columns["btnReject"]?.Index ?? -1;
+
+                if (e.ColumnIndex == viewIndex)
+                {
+                    if (dgvSender.Rows[e.RowIndex].Tag != null)
+                    {
+                        int candidateId = Convert.ToInt32(dgvSender.Rows[e.RowIndex].Tag);
+                        await ShowCandidateDetailsAsync(_client, candidateId);
+                    }
+                }
+                else if (e.ColumnIndex == approveIndex)
+                {
+                    if (dgvSender.Rows[e.RowIndex].Tag != null)
+                    {
+                        int candidateId = Convert.ToInt32(dgvSender.Rows[e.RowIndex].Tag);
+                        string name = dgvSender.Rows[e.RowIndex].Cells["FullName"]?.Value?.ToString() ?? "Unknown";
+                        await ApproveCandidateAsync(candidateId, name, dgvSender, cmbStatus);
+                    }
+                }
+                else if (e.ColumnIndex == rejectIndex)
+                {
+                    if (dgvSender.Rows[e.RowIndex].Tag != null)
+                    {
+                        int candidateId = Convert.ToInt32(dgvSender.Rows[e.RowIndex].Tag);
+                        string name = dgvSender.Rows[e.RowIndex].Cells["FullName"]?.Value?.ToString() ?? "Unknown";
+                        await RejectCandidateAsync(candidateId, name, dgvSender, cmbStatus);
+                    }
+                }
+            };
+
+            dgv.CellFormatting += (s, e) =>
+            {
+                if (e.RowIndex < 0 || s is not DataGridView dgvSender || e.CellStyle == null) return;
+
+                // Alternate row coloring
+                if (e.RowIndex % 2 == 0)
+                {
+                    e.CellStyle.BackColor = Color.FromArgb(250, 250, 250);
+                }
+                else
+                {
+                    e.CellStyle.BackColor = Color.White;
+                }
+
+                // Style for Status column
+                if (dgvSender.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
+                {
+                    string status = e.Value.ToString() ?? "";
+                    e.CellStyle.ForeColor = status switch
+                    {
+                        "Approved" => COLOR_SUCCESS,
+                        "Pending" => COLOR_WARNING,
+                        "Rejected" => COLOR_DANGER,
+                        _ => Color.Black
+                    };
+                    e.CellStyle.Font = new Font(dgvSender.Font, FontStyle.Bold);
+                }
+            };
+
+            cmbStatus.SelectedIndexChanged += async (s, e) =>
+            {
+                await LoadCandidatesAsync(dgv, cmbStatus.SelectedItem?.ToString() ?? "All Candidates", txtSearch.Text);
+            };
+
+            txtSearch.TextChanged += async (s, e) =>
+            {
+                await LoadCandidatesAsync(dgv, cmbStatus.SelectedItem?.ToString() ?? "All Candidates", txtSearch.Text);
+            };
+
+            dgvContainer.Controls.Add(dgv);
+            mainPanel.Controls.Add(filterPanel);
+            mainPanel.Controls.Add(dgvContainer);
+            pnlMainContent.Controls.Add(mainPanel);
+
+            // Load initial data
+            _ = LoadCandidatesAsync(dgv, "All Candidates", "");
+        }
+
+        private async Task LoadCandidatesAsync(DataGridView dgv, string statusFilter, string search = "")
+        {
+            try
+            {
+                dgv.Rows.Clear();
+                Cursor = Cursors.WaitCursor;
+
+                // Use CandidateController endpoints
+                string endpoint = statusFilter switch
+                {
+                    "Pending" => "api/candidate/pending",
+                    "Approved" => "api/candidate/approved",
+                    "Rejected" => "api/candidate/rejected",
+                    _ => "api/candidate/all"
+                };
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+                    // CandidateController returns { success: true, candidates: [...] }
+                    if (result.TryGetProperty("success", out var success) && success.GetBoolean())
+                    {
+                        if (result.TryGetProperty("candidates", out var candidates))
+                        {
+                            foreach (var candidate in candidates.EnumerateArray())
+                            {
+                                string fullName = GetJsonString(candidate, "FullName", "fullName", "Name");
+                                string email = GetJsonString(candidate, "Email", "email");
+                                string party = GetJsonString(candidate, "PartyAffiliation", "Party", "partyAffiliation");
+                                string status = GetJsonString(candidate, "Status", "status");
+                                string regDate = GetDateTimeString(candidate, "ApplicationDate", "applicationDate");
+
+                                // Check search filter robustly
+                                if (!string.IsNullOrEmpty(search))
+                                {
+                                    if (!fullName.Contains(search, StringComparison.OrdinalIgnoreCase) &&
+                                        !email.Contains(search, StringComparison.OrdinalIgnoreCase) &&
+                                        !party.Contains(search, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+                                }
+
+                                int rowIndex = dgv.Rows.Add(fullName, email, party, status, regDate);
+
+                                // Store candidate ID
+                                int? candidateId = GetJsonInt(candidate, "Id", "id");
+                                if (candidateId.HasValue)
+                                    dgv.Rows[rowIndex].Tag = candidateId.Value;
+
+                                // Alternate row colors
+                                if (rowIndex % 2 == 0)
+                                {
+                                    dgv.Rows[rowIndex].DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250);
+                                }
+
+                                // Disable buttons based on status
+                                if (status == "Approved")
+                                {
+                                    dgv.Rows[rowIndex].Cells["btnApprove"].Style.BackColor = Color.LightGray;
+                                }
+                                else if (status == "Rejected")
+                                {
+                                    dgv.Rows[rowIndex].Cells["btnReject"].Style.BackColor = Color.LightGray;
+                                }
                             }
                         }
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Failed to load candidates: {response.StatusCode}", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -908,439 +959,301 @@ namespace Election.UI.Forms
             }
             finally
             {
-                dgv.ResumeLayout();
                 Cursor = Cursors.Default;
-            }
-        }
-
-        private async Task LoadCandidateUsersAsync(DataGridView dgv)
-        {
-            try
-            {
-                dgv.SuspendLayout();
-                dgv.Rows.Clear();
-                Cursor = Cursors.WaitCursor;
-
-                // ✅ FIXED: Use detailed voters endpoint
-                var response = await _client.GetAsync("api/admin/voters-detailed");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    if (result.TryGetProperty("voters", out var voters))
-                    {
-                        foreach (var voter in voters.EnumerateArray())
-                        {
-                            dgv.Rows.Add(
-                                voter.GetProperty("id").GetInt32(),
-                                voter.GetProperty("username").GetString(),
-                                voter.GetProperty("email").GetString(),
-                                voter.GetProperty("role").GetString(),
-                                voter.GetProperty("region").GetString(),
-                                voter.GetProperty("hasVoted").GetBoolean() ? "✅ Voted" : "❌ Not Voted",
-                                voter.GetProperty("registeredDate").GetDateTime().ToString("yyyy-MM-dd"),
-                                voter.GetProperty("isCandidate").GetBoolean() ? "Yes" : "No"
-                            );
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading voters: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                dgv.ResumeLayout();
-                Cursor = Cursors.Default;
-            }
-        }
-
-        private void DgvCandidates_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
-        {
-            if (e.RowIndex < 0) return;
-
-            DataGridView dgv = (DataGridView)sender;
-
-            if (dgv.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
-            {
-                string status = e.Value.ToString();
-                if (status == "✅ Approved")
-                {
-                    e.CellStyle.ForeColor = Color.Green;
-                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
-                }
-                else if (status == "⏳ Pending")
-                {
-                    e.CellStyle.ForeColor = Color.Orange;
-                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
-                }
-                else if (status == "❌ Rejected")
-                {
-                    e.CellStyle.ForeColor = Color.Red;
-                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
-                }
-            }
-
-            // Format Votes column
-            if (dgv.Columns[e.ColumnIndex].Name == "Votes" && e.Value != null)
-            {
-                if (int.TryParse(e.Value.ToString(), out int votes))
-                {
-                    e.CellStyle.ForeColor = votes > 0 ? Color.Blue : Color.Gray;
-                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
-                }
-            }
-        }
-
-        private async void DgvCandidates_CellClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0) return;
-
-            DataGridView dgv = (DataGridView)sender;
-
-            if (e.ColumnIndex == dgv.Columns["View"].Index)
-            {
-                int candidateId = Convert.ToInt32(dgv.Rows[e.RowIndex].Cells["Id"].Value);
-                string candidateName = dgv.Rows[e.RowIndex].Cells["FullName"].Value.ToString();
-                await ShowCandidateDetailsAsync(candidateId, candidateName);
-            }
-            else if (e.ColumnIndex == dgv.Columns["Actions"].Index)
-            {
-                int candidateId = Convert.ToInt32(dgv.Rows[e.RowIndex].Cells["Id"].Value);
-                string candidateName = dgv.Rows[e.RowIndex].Cells["FullName"].Value.ToString();
-                ShowCandidateActionsMenu(candidateId, candidateName);
-            }
-        }
-
-        private async Task ShowCandidateDetailsAsync(int candidateId, string candidateName)
-        {
-            try
-            {
-                var response = await _client.GetAsync($"api/candidate/details/{candidateId}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<JsonElement>(responseString);
-
-                    if (result.TryGetProperty("candidate", out var candidate))
-                    {
-                        using (var detailsForm = new Form())
-                        {
-                            detailsForm.Text = $"Candidate Details: {candidateName}";
-                            detailsForm.Size = new Size(500, 400);
-                            detailsForm.StartPosition = FormStartPosition.CenterParent;
-                            detailsForm.MaximizeBox = true;
-                            detailsForm.MinimizeBox = true;
-                            detailsForm.FormBorderStyle = FormBorderStyle.Sizable;
-
-                            TextBox txtDetails = new TextBox
-                            {
-                                Multiline = true,
-                                ReadOnly = true,
-                                ScrollBars = ScrollBars.Vertical,
-                                Dock = DockStyle.Fill,
-                                Font = new Font("Consolas", 10),
-                                Text = FormatCandidateDetails(candidate)
-                            };
-
-                            detailsForm.Controls.Add(txtDetails);
-                            detailsForm.ShowDialog();
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void ShowCandidateActionsMenu(int candidateId, string candidateName)
-        {
-            ContextMenuStrip menu = new ContextMenuStrip();
-
-            ToolStripMenuItem approveItem = new ToolStripMenuItem("✅ Approve Candidate");
-            approveItem.Click += async (s, e) =>
-                await ApproveCandidateAsync(candidateId, candidateName);
-
-            ToolStripMenuItem rejectItem = new ToolStripMenuItem("❌ Reject Candidate");
-            rejectItem.Click += async (s, e) =>
-                await RejectCandidateAsync(candidateId, candidateName);
-
-            menu.Items.Add(approveItem);
-            menu.Items.Add(rejectItem);
-            menu.Show(Cursor.Position);
-        }
-
-        private async Task ApproveCandidateAsync(int candidateId, string candidateName)
-        {
-            var result = MessageBox.Show($"Approve candidate: {candidateName}?",
-                "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-            if (result == DialogResult.Yes)
-            {
-                try
-                {
-                    Cursor = Cursors.WaitCursor;
-                    var response = await _client.PutAsync($"api/candidate/approve/{candidateId}", null);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        MessageBox.Show("Candidate approved successfully!",
-                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        await LoadCurrentTabDataAsync();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error: {ex.Message}", "Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                finally
-                {
-                    Cursor = Cursors.Default;
-                }
-            }
-        }
-
-        private async Task RejectCandidateAsync(int candidateId, string candidateName)
-        {
-            var result = MessageBox.Show($"Reject candidate: {candidateName}?",
-                "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (result == DialogResult.Yes)
-            {
-                try
-                {
-                    Cursor = Cursors.WaitCursor;
-                    var response = await _client.PutAsync($"api/candidate/reject/{candidateId}", null);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        MessageBox.Show("Candidate rejected!",
-                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        await LoadCurrentTabDataAsync();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error: {ex.Message}", "Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                finally
-                {
-                    Cursor = Cursors.Default;
-                }
-            }
-        }
-
-        private string FormatCandidateDetails(JsonElement candidate)
-        {
-            try
-            {
-                return $@"CANDIDATE DETAILS
-────────────────────────────
-Full Name:    {candidate.GetProperty("fullName").GetString()}
-Age:          {candidate.GetProperty("age").GetInt32()}
-Region:       {candidate.GetProperty("region").GetString()}
-Party:        {candidate.GetProperty("partyAffiliation").GetString()}
-Email:        {candidate.GetProperty("email").GetString()}
-Phone:        {candidate.GetProperty("phone").GetString()}
-Status:       {candidate.GetProperty("status").GetString()}
-Approved:     {(candidate.GetProperty("isApproved").GetBoolean() ? "Yes" : "No")}
-Rejected:     {(candidate.TryGetProperty("isRejected", out var rejected) ? rejected.GetBoolean() : false ? "Yes" : "No")}
-Votes:        {(candidate.TryGetProperty("votesReceived", out var votes) ? votes.GetInt32() : 0)}
-Applied On:   {candidate.GetProperty("applicationDate").GetDateTime():yyyy-MM-dd HH:mm}
-────────────────────────────
-Admin Remarks:
-{candidate.GetProperty("adminRemarks").GetString()}";
-            }
-            catch
-            {
-                return "Error loading candidate details.";
             }
         }
         #endregion
 
-        #region Voter Management
-        private void CreateVoterManagementPanel()
+        #region User Management
+        private void CreateUserManagementPanel()
         {
-            Panel mainPanel = new Panel
+            Panel mainPanel = new()
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(20)
+                Padding = new(20)
             };
 
-            // ✅ FIXED: Search Panel with proper layout
             Panel searchPanel = new Panel
             {
-                Location = new Point(0, 0),
-                Size = new Size(mainPanel.Width - 40, 60),
-                BackColor = Color.FromArgb(245, 245, 245),
-                BorderStyle = BorderStyle.FixedSingle,
+                Height = 60,
+                Dock = DockStyle.Top,
+                BackColor = Color.FromArgb(240, 240, 240),
                 Padding = new Padding(10)
+            };
+
+            Label lblSearch = new Label
+            {
+                Text = "Search:",
+                Location = new Point(10, 18),
+                Size = new Size(80, 20),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
 
             TextBox txtSearch = new TextBox
             {
-                PlaceholderText = "Search voters by name, email, or region...",
-                Location = new Point(10, 15),
-                Size = new Size(searchPanel.Width - 270, 30),
-                Font = new Font("Segoe UI", 11),
-                Anchor = AnchorStyles.Left | AnchorStyles.Right
+                PlaceholderText = "Search by username or email...",
+                Location = new Point(90, 15),
+                Width = 250,
+                Font = new Font("Segoe UI", 10)
             };
 
-            Button btnSearch = new Button
+            Label lblFilter = new()
+            {
+                Text = "Role:",
+                Location = new(310, 18),
+                Size = new(80, 20),
+                Font = new("Segoe UI", 10, FontStyle.Bold)
+            };
+
+            ComboBox cmbRoleFilter = new()
+            {
+                Location = new(370, 15),
+                Width = 120,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new("Segoe UI", 10)
+            };
+            cmbRoleFilter.Items.AddRange(_userRoles);
+            cmbRoleFilter.SelectedIndex = 0;
+
+            Label lblStatusFilter = new()
+            {
+                Text = "Status:",
+                Location = new(510, 18),
+                Size = new(80, 20),
+                Font = new("Segoe UI", 10, FontStyle.Bold)
+            };
+
+            ComboBox cmbStatusFilter = new()
+            {
+                Location = new(580, 15),
+                Width = 120,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new("Segoe UI", 10)
+            };
+            cmbStatusFilter.Items.AddRange(_userStatus);
+            cmbStatusFilter.SelectedIndex = 0;
+
+            Button btnSearch = new()
             {
                 Text = "🔍 Search",
-                Location = new Point(searchPanel.Width - 240, 15),
-                Size = new Size(100, 30),
-                BackColor = Color.DodgerBlue,
+                Location = new(720, 15),
+                Size = new(120, 30),
+                BackColor = COLOR_SECONDARY,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnSearch.FlatAppearance.BorderSize = 0;
-
-            Button btnExport = new Button
-            {
-                Text = "📥 Export CSV",
-                Location = new Point(searchPanel.Width - 120, 15),
-                Size = new Size(120, 30),
-                BackColor = Color.FromArgb(46, 125, 50),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnExport.FlatAppearance.BorderSize = 0;
-
-            // Handle resize events
-            searchPanel.Resize += (s, e) =>
-            {
-                txtSearch.Width = searchPanel.Width - 270;
-                btnSearch.Left = searchPanel.Width - 240;
-                btnExport.Left = searchPanel.Width - 120;
+                Font = new("Segoe UI", 9, FontStyle.Bold),
+                FlatAppearance = { BorderSize = 0 }
             };
 
-            mainPanel.Resize += (s, e) =>
+            searchPanel.Controls.Add(lblSearch);
+            searchPanel.Controls.Add(txtSearch);
+            searchPanel.Controls.Add(lblFilter);
+            searchPanel.Controls.Add(cmbRoleFilter);
+            searchPanel.Controls.Add(lblStatusFilter);
+            searchPanel.Controls.Add(cmbStatusFilter);
+            searchPanel.Controls.Add(btnSearch);
+
+            // Container for DataGridView to ensure proper docking
+            Panel gridContainer = new Panel
             {
-                searchPanel.Width = mainPanel.Width - 40;
+                Dock = DockStyle.Fill,
+                Padding = new Padding(0, 20, 0, 0), // Top padding to separate from search
+                BackColor = Color.White
             };
 
-            searchPanel.Controls.AddRange(new Control[] { txtSearch, btnSearch, btnExport });
-
-            // ✅ FIXED: Data GridView - positioned below search panel
-            DataGridView dgvVoters = new DataGridView
+            // DataGridView
+            DataGridView dgv = new DataGridView
             {
-                Name = "dgvVoters",
-                Location = new Point(0, 70),
-                Size = new Size(mainPanel.Width - 40, mainPanel.Height - 90),
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
+                Dock = DockStyle.Fill,
                 ReadOnly = true,
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                BorderStyle = BorderStyle.None,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(240, 240, 240),
+                ColumnHeadersHeight = 45,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
             };
 
-            // Add columns
-            dgvVoters.Columns.Add("Id", "ID");
-            dgvVoters.Columns.Add("FullName", "Full Name");
-            dgvVoters.Columns.Add("Username", "Username");
-            dgvVoters.Columns.Add("Email", "Email");
-            dgvVoters.Columns.Add("Region", "Region");
-            dgvVoters.Columns.Add("Age", "Age");
-            dgvVoters.Columns.Add("HasVoted", "Voting Status");
-            dgvVoters.Columns.Add("RegisteredDate", "Registered Date");
-            dgvVoters.Columns.Add("IsCandidate", "Candidate?");
-
-            // Action buttons column
-            DataGridViewButtonColumn btnActions = new DataGridViewButtonColumn
+            // Set header style
+            dgv.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
             {
-                HeaderText = "Actions",
-                Text = "Manage",
+                BackColor = COLOR_SECONDARY,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Alignment = DataGridViewContentAlignment.MiddleCenter,
+                Padding = new Padding(0, 5, 0, 5)
+            };
+            dgv.EnableHeadersVisualStyles = false;
+
+            // Columns
+            dgv.Columns.Add("Username", "👤 Username");
+            dgv.Columns.Add("Email", "📧 Email Address");
+            dgv.Columns.Add("FullName", "📛 Full Name");
+            dgv.Columns.Add("Role", "👥 User Role");
+            dgv.Columns.Add("RegisteredDate", "📅 Registered Date");
+            dgv.Columns.Add("Status", "📊 Account Status");
+
+            // Set column widths
+            dgv.Columns["Username"].Width = 120;
+            dgv.Columns["Email"].Width = 160;
+            dgv.Columns["FullName"].Width = 150;
+            dgv.Columns["Role"].Width = 90;
+            dgv.Columns["RegisteredDate"].Width = 110;
+            dgv.Columns["Status"].Width = 100;
+
+            // Action column
+            DataGridViewButtonColumn btnActions = new()
+            {
+                Name = "btnActions",
+                HeaderText = "⚡ Actions",
+                Text = "⚡ Manage",
                 UseColumnTextForButtonValue = true,
-                Width = 80
+                Width = 100,
+                FlatStyle = FlatStyle.Flat
             };
-            dgvVoters.Columns.Add(btnActions);
+            dgv.Columns.Add(btnActions);
 
-            // ✅ FIXED: Handle main panel resize to update DataGridView size
-            mainPanel.Resize += (s, e) =>
+            dgv.CellClick += (s, e) =>
             {
-                searchPanel.Width = mainPanel.Width - 40;
-                dgvVoters.Width = mainPanel.Width - 40;
-                dgvVoters.Height = mainPanel.Height - 90;
+                if (e.RowIndex < 0 || e.ColumnIndex != btnActions.Index) return;
+
+                string username = dgv.Rows[e.RowIndex].Cells["Username"].Value?.ToString() ?? "";
+                string status = dgv.Rows[e.RowIndex].Cells["Status"].Value?.ToString() ?? "Active";
+                ShowUserActionsMenu(username, status, dgv, e.RowIndex);
             };
 
-            // Connect events
-            btnSearch.Click += async (s, e) => await LoadVotersAsync(dgvVoters, txtSearch.Text);
-            btnExport.Click += (s, e) => ExportVotersToCSV(dgvVoters);
-            dgvVoters.CellClick += DgvVoters_CellClick;
-            dgvVoters.CellFormatting += DgvVoters_CellFormatting;
+            dgv.CellFormatting += (s, e) =>
+            {
+                if (e.RowIndex < 0 || s is not DataGridView dgvSender || e.CellStyle == null) return;
 
-            mainPanel.Controls.Add(searchPanel);
-            mainPanel.Controls.Add(dgvVoters);
+                // Alternate row coloring
+                e.CellStyle.BackColor = e.RowIndex % 2 == 0 ? Color.FromArgb(250, 250, 250) : Color.White;
+
+                // Style for Role column
+                if (dgvSender.Columns[e.ColumnIndex].Name == "Role" && e.Value != null)
+                {
+                    string role = e.Value.ToString() ?? "";
+                    e.CellStyle.ForeColor = role switch
+                    {
+                        "Admin" => COLOR_DANGER,
+                        "Candidate" => COLOR_INFO,
+                        _ => COLOR_SECONDARY
+                    };
+                    e.CellStyle.Font = new(dgvSender.Font, FontStyle.Bold);
+                }
+                // Style for Status column
+                else if (dgvSender.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
+                {
+                    string status = e.Value.ToString() ?? "";
+                    e.CellStyle.ForeColor = status == "Active" ? COLOR_SUCCESS : COLOR_DANGER;
+                    e.CellStyle.Font = new(dgvSender.Font, FontStyle.Bold);
+                }
+            };
+
+            // Add grid to container
+            gridContainer.Controls.Add(dgv);
+
+            // Add layouts
+            mainPanel.Controls.Add(gridContainer);
+            mainPanel.Controls.Add(searchPanel); // Search panel on Top
+
+            btnSearch.Click += async (s, e) =>
+            {
+                await LoadUsersAsync(dgv, txtSearch.Text, cmbRoleFilter.Text, cmbStatusFilter.Text);
+            };
+
+            txtSearch.KeyPress += async (s, e) =>
+            {
+                if (e.KeyChar == (char)Keys.Enter)
+                {
+                    await LoadUsersAsync(dgv, txtSearch.Text, cmbRoleFilter.Text, cmbStatusFilter.Text);
+                }
+            };
+
+            cmbRoleFilter.SelectedIndexChanged += async (s, e) =>
+            {
+                await LoadUsersAsync(dgv, txtSearch.Text, cmbRoleFilter.Text, cmbStatusFilter.Text);
+            };
+
+            cmbStatusFilter.SelectedIndexChanged += async (s, e) =>
+            {
+                await LoadUsersAsync(dgv, txtSearch.Text, cmbRoleFilter.Text, cmbStatusFilter.Text);
+            };
+
             pnlMainContent.Controls.Add(mainPanel);
 
             // Load initial data
-            _ = LoadVotersAsync(dgvVoters, "");
+            _ = LoadUsersAsync(dgv, "", "All Roles", "All Status");
         }
 
-        private async Task LoadVotersAsync(DataGridView dgv, string search)
+        private async Task LoadUsersAsync(DataGridView dgv, string search = "", string roleFilter = "All Roles", string statusFilter = "All Status")
         {
             try
             {
                 dgv.Rows.Clear();
                 Cursor = Cursors.WaitCursor;
 
-                var response = await _client.GetAsync("api/admin/voters-detailed");
-
+                var response = await _client.GetAsync("api/admin/all-users");
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    if (result.TryGetProperty("voters", out var voters))
+
+                    if (result.TryGetProperty("users", out JsonElement users) || result.TryGetProperty("Users", out users))
                     {
-                        foreach (var voter in voters.EnumerateArray())
+                        if (users.ValueKind == JsonValueKind.Array)
                         {
-                            if (!string.IsNullOrEmpty(search))
+                            foreach (var user in users.EnumerateArray())
                             {
-                                string username = voter.GetProperty("username").GetString()?.ToLower() ?? "";
-                                string email = voter.GetProperty("email").GetString()?.ToLower() ?? "";
-                                string region = voter.GetProperty("region").GetString()?.ToLower() ?? "";
-                                string fullName = voter.GetProperty("fullName").GetString()?.ToLower() ?? "";
+                                string username = GetJsonString(user, "Username", "username");
+                                string email = GetJsonString(user, "Email", "email");
+                                string fullName = GetJsonString(user, "FullName", "fullName");
+                                string role = GetJsonString(user, "Role", "role");
+                                string registeredDate = GetDateTimeString(user, "CreatedAt", "createdAt");
 
-                                if (!username.Contains(search.ToLower()) &&
-                                    !email.Contains(search.ToLower()) &&
-                                    !region.Contains(search.ToLower()) &&
-                                    !fullName.Contains(search.ToLower()))
+                                // Check approval status robustly
+                                bool isApproved = false;
+                                if (user.TryGetProperty("IsApproved", out var ia)) isApproved = ia.GetBoolean();
+                                else if (user.TryGetProperty("isApproved", out ia)) isApproved = ia.GetBoolean();
+
+                                string status = isApproved ? "Active" : "Disabled";
+
+                                // Check status filter
+                                if (statusFilter != "All Status" && !status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase))
                                     continue;
-                            }
 
-                            dgv.Rows.Add(
-                                voter.GetProperty("id").GetInt32(),
-                                voter.GetProperty("fullName").GetString(),
-                                voter.GetProperty("username").GetString(),
-                                voter.GetProperty("email").GetString(),
-                                voter.GetProperty("region").GetString(),
-                                voter.GetProperty("age").GetInt32(),
-                                voter.GetProperty("hasVoted").GetBoolean() ? "✅ Voted" : "❌ Not Voted",
-                                voter.GetProperty("registeredDate").GetDateTime().ToString("yyyy-MM-dd"),
-                                voter.GetProperty("isCandidate").GetBoolean() ? "Yes" : "No"
-                            );
+                                // Check role filter
+                                if (roleFilter != "All Roles" && !role.Equals(roleFilter, StringComparison.OrdinalIgnoreCase))
+                                    continue;
+
+                                // Check search filter
+                                if (!string.IsNullOrEmpty(search))
+                                {
+                                    if (!username.Contains(search, StringComparison.OrdinalIgnoreCase) &&
+                                        !email.Contains(search, StringComparison.OrdinalIgnoreCase) &&
+                                        !fullName.Contains(search, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+                                }
+
+                                int rowIndex = dgv.Rows.Add(username, email, fullName, role, registeredDate, status);
+
+                                // Store user ID
+                                int? userId = GetJsonInt(user, "Id", "id");
+                                if (userId.HasValue)
+                                    dgv.Rows[rowIndex].Tag = userId.Value;
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading voters: {ex.Message}", "Error",
+                MessageBox.Show($"Error loading users: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -1349,514 +1262,544 @@ Admin Remarks:
             }
         }
 
-        private void DgvVoters_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        private void ShowUserActionsMenu(string username, string status, DataGridView dgv, int rowIndex)
         {
-            if (e.RowIndex < 0) return;
+            ContextMenuStrip menu = new();
 
-            DataGridView dgv = (DataGridView)sender;
+            int? userId = dgv.Rows[rowIndex].Tag as int?;
+            string fullName = dgv.Rows[rowIndex].Cells["FullName"].Value?.ToString() ?? username;
 
-            // Format HasVoted column
-            if (dgv.Columns[e.ColumnIndex].Name == "HasVoted" && e.Value != null)
+            ToolStripMenuItem toggleItem = new(
+                status == "Active" ? "⏸️ Disable Account" : "▶️ Enable Account");
+            toggleItem.Click += async (s, e) =>
             {
-                string status = e.Value.ToString();
-                if (status == "✅ Voted")
+                if (userId.HasValue)
                 {
-                    e.CellStyle.ForeColor = Color.Green;
-                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                    await ToggleUserAccountAsync(userId.Value, fullName, status == "Active");
                 }
-                else if (status == "❌ Not Voted")
-                {
-                    e.CellStyle.ForeColor = Color.Red;
-                    e.CellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
-                }
-            }
-        }
+            };
 
-        private void DgvVoters_CellClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0 || e.ColumnIndex != 9) return; // Actions column
+            ToolStripMenuItem viewItem = new("👁️ View Details");
+            viewItem.Click += (s, e) => ViewUserDetails(fullName, username);
 
-            DataGridView dgv = (DataGridView)sender;
-            int userId = Convert.ToInt32(dgv.Rows[e.RowIndex].Cells["Id"].Value);
-            string username = dgv.Rows[e.RowIndex].Cells["Username"].Value.ToString();
-
-            ShowVoterActionsMenu(userId, username);
-        }
-
-        private void ShowVoterActionsMenu(int userId, string username)
-        {
-            ContextMenuStrip menu = new ContextMenuStrip();
-
-            ToolStripMenuItem viewItem = new ToolStripMenuItem("👁️ View Details");
-            viewItem.Click += (s, e) => ViewVoterDetails(userId, username);
-
-            ToolStripMenuItem toggleVoteItem = new ToolStripMenuItem("🗳️ Toggle Voting Status");
-            toggleVoteItem.Click += async (s, e) => await ToggleVoterVotingStatus(userId, username);
-
-            ToolStripMenuItem disableItem = new ToolStripMenuItem("⏸️ Disable Account");
-            disableItem.Click += (s, e) => DisableVoterAccount(userId, username);
-
-            ToolStripMenuItem deleteItem = new ToolStripMenuItem("🗑️ Delete Account");
-            deleteItem.Click += (s, e) => DeleteVoterAccount(userId, username);
-
-            menu.Items.Add(viewItem);
-            menu.Items.Add(toggleVoteItem);
+            menu.Items.Add(toggleItem);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(disableItem);
-            menu.Items.Add(deleteItem);
-
+            menu.Items.Add(viewItem);
             menu.Show(Cursor.Position);
         }
 
-        private async Task ToggleVoterVotingStatus(int userId, string username)
+        private async Task ToggleUserAccountAsync(int userId, string displayName, bool currentlyActive)
         {
-            try
+            string action = currentlyActive ? "disable" : "enable";
+
+            var result = MessageBox.Show($"Are you sure you want to {action} account for:\n\n{displayName}?",
+                $"Confirm {action.ToUpper()} Account", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
             {
-                var response = await _client.PutAsync($"api/admin/toggle-voter-status/{userId}", null);
-
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    var message = result.GetProperty("message").GetString();
-
-                    MessageBox.Show(message, "Success",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    // Refresh voter list - find the DataGridView in the panel
-                    var mainPanel = pnlMainContent.Controls[0] as Panel;
-                    if (mainPanel != null)
+                    var response = await _client.PutAsync($"api/admin/toggle-user-status/{userId}", null);
+                    if (response.IsSuccessStatusCode)
                     {
-                        var dgv = mainPanel.Controls.OfType<DataGridView>().FirstOrDefault();
-                        if (dgv != null)
-                        {
-                            await LoadVotersAsync(dgv, "");
-                        }
+                        MessageBox.Show($"✅ Account {action}d successfully!", "Success",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        RefreshCurrentView();
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void ViewVoterDetails(int userId, string username)
-        {
-            MessageBox.Show($"View details for: {username}\nUser ID: {userId}\n\nFeature coming soon!",
-                "Voter Details", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void DisableVoterAccount(int userId, string username)
-        {
-            var result = MessageBox.Show($"Disable account for: {username}?",
-                "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-            if (result == DialogResult.Yes)
-            {
-                MessageBox.Show($"Account for {username} has been disabled.",
-                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
-        private void DeleteVoterAccount(int userId, string username)
+        private static void ViewUserDetails(string fullName, string username)
         {
-            var result = MessageBox.Show($"PERMANENTLY DELETE account for: {username}?\n\nThis cannot be undone!",
-                "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-            if (result == DialogResult.Yes)
-            {
-                MessageBox.Show($"Account for {username} has been deleted.",
-                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-
-        private void ExportVotersToCSV(DataGridView dgv)
-        {
-            MessageBox.Show("CSV export feature coming soon!\n\nYou can implement this using:\n" +
-                "1. SaveFileDialog to choose location\n" +
-                "2. Loop through DataGridView rows\n" +
-                "3. Write to .csv file",
-                "Export Feature", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show($"👤 User Details\n════════════════════════════\n\n" +
+                          $"📛 Full Name: {fullName}\n" +
+                          $"👤 Username: {username}\n\n" +
+                          $"════════════════════════════",
+                "User Details", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         #endregion
 
-        #region Results View
-        private void CreateResultsPanel()
+        #region Vote Monitoring - FIXED: Proper headers and layout
+        private void CreateVoteMonitoringPanel()
         {
-            Panel mainPanel = new Panel
+            Panel mainPanel = new()
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(20)
+                Padding = new(20)
             };
 
-            // Header
-            Label lblTitle = new Label
+            // Real-time stats panel
+            Panel statsPanel = new()
             {
-                Text = "📊 ELECTION RESULTS DASHBOARD",
-                Font = new Font("Segoe UI", 20, FontStyle.Bold),
-                ForeColor = Color.Navy,
-                Location = new Point(20, 20),
-                Size = new Size(500, 40)
+                Height = 80,
+                Dock = DockStyle.Top,
+                BackColor = Color.FromArgb(240, 245, 255),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new(15)
             };
 
-            Label lblStatus = new Label
+            // Total Votes label
+            Label lblTotalVotes = new()
             {
-                Name = "lblElectionStatusResults",
-                Text = "Loading election status...",
-                Font = new Font("Segoe UI", 12),
+                Name = "lblTotalVotes",
+                Text = "Total Votes: 0",
+                Font = new("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = COLOR_PRIMARY,
+                Location = new(20, 15),
+                AutoSize = true
+            };
+
+            // Participation label
+            Label lblParticipation = new()
+            {
+                Name = "lblParticipation",
+                Text = "Participation: 0%",
+                Font = new("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = COLOR_INFO,
+                Location = new(200, 15),
+                AutoSize = true
+            };
+
+            // Last update label
+            Label lblLastUpdate = new()
+            {
+                Name = "lblLastUpdate",
+                Text = "Last update: Never",
+                Font = new("Segoe UI", 9),
                 ForeColor = Color.Gray,
-                Location = new Point(20, 70),
-                Size = new Size(400, 30)
+                Location = new(410, 18),
+                AutoSize = true
             };
 
-            // Results Grid
-            DataGridView dgvResults = new DataGridView
+            // Auto-refresh status
+            Label lblRefreshStatus = new()
             {
-                Name = "dgvResults",
-                Location = new Point(20, 120),
-                Size = new Size(pnlMainContent.Width - 60, pnlMainContent.Height - 200),
+                Name = "lblRefreshStatus",
+                Text = "⏱️ Auto-refresh: ON",
+                Font = new("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = COLOR_SUCCESS,
+                Location = new(410, 38),
+                AutoSize = true
+            };
+
+            statsPanel.Controls.Add(lblTotalVotes);
+            statsPanel.Controls.Add(lblParticipation);
+            statsPanel.Controls.Add(lblLastUpdate);
+            statsPanel.Controls.Add(lblRefreshStatus);
+
+            // Create DataGridView FIRST
+            DataGridView dgvVoteMonitoring = new()
+            {
+                Name = "dgvVoteMonitoring",
+                Dock = DockStyle.Fill,
+                Location = new(0, 90),
                 ReadOnly = true,
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+                ColumnHeadersHeight = 45,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(240, 240, 240),
+                RowTemplate = { Height = 40 }
             };
 
-            // Add columns
-            dgvResults.Columns.Add("Position", "Position");
-            dgvResults.Columns.Add("Candidate", "Candidate");
-            dgvResults.Columns.Add("Party", "Party");
-            dgvResults.Columns.Add("Region", "Region");
-            dgvResults.Columns.Add("Votes", "Votes");
-            dgvResults.Columns.Add("Percentage", "Percentage");
-            dgvResults.Columns.Add("Status", "Status");
-
-            // Action buttons
-            Panel buttonPanel = new Panel
+            // Set header style
+            dgvVoteMonitoring.ColumnHeadersDefaultCellStyle = new()
             {
-                Location = new Point(20, pnlMainContent.Height - 70),
-                Size = new Size(pnlMainContent.Width - 60, 60),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            Button btnRefreshResults = new Button
-            {
-                Text = "🔄 Refresh Results",
-                Location = new Point(0, 10),
-                Size = new Size(150, 40),
-                BackColor = Color.DodgerBlue,
+                BackColor = COLOR_SECONDARY,
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                Font = new("Segoe UI", 11, FontStyle.Bold),
+                Alignment = DataGridViewContentAlignment.MiddleCenter,
+                Padding = new(0, 5, 0, 5),
+                SelectionBackColor = COLOR_SECONDARY,
+                SelectionForeColor = Color.White
             };
-            btnRefreshResults.FlatAppearance.BorderSize = 0;
-            btnRefreshResults.Click += async (s, e) => await LoadResultsAsync(dgvResults, lblStatus);
 
-            Button btnExportResults = new Button
+            // ADD COLUMNS WITH PROPER HEADERS
+            dgvVoteMonitoring.Columns.Add("CandidateName", "Candidate Name");
+            dgvVoteMonitoring.Columns.Add("Party", "Party");
+            dgvVoteMonitoring.Columns.Add("Votes", "Votes");
+            dgvVoteMonitoring.Columns.Add("Percentage", "Percentage");
+            dgvVoteMonitoring.Columns.Add("LastUpdateDate", "Last Update Date");
+
+            // Set column widths
+            dgvVoteMonitoring.Columns["CandidateName"].Width = 200;
+            dgvVoteMonitoring.Columns["Party"].Width = 150;
+            dgvVoteMonitoring.Columns["Votes"].Width = 100;
+            dgvVoteMonitoring.Columns["Percentage"].Width = 120;
+            dgvVoteMonitoring.Columns["LastUpdateDate"].Width = 180;
+
+            // Formatting for columns
+            dgvVoteMonitoring.Columns["Percentage"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dgvVoteMonitoring.Columns["Votes"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dgvVoteMonitoring.Columns["LastUpdateDate"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            // Row formatting
+            dgvVoteMonitoring.CellFormatting += (s, e) =>
             {
-                Text = "📊 Export to PDF",
-                Location = new Point(170, 10),
-                Size = new Size(150, 40),
-                BackColor = Color.FromArgb(198, 40, 40),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnExportResults.FlatAppearance.BorderSize = 0;
-            btnExportResults.Click += (s, e) => ExportResultsToPDF();
+                if (e.RowIndex < 0) return;
 
-            Button btnDeclareWinner = new Button
+                DataGridView dgvSender = (DataGridView)s!;
+
+                // Alternate row colors
+                if (e.RowIndex % 2 == 0)
+                {
+                    e.CellStyle!.BackColor = Color.FromArgb(250, 250, 250);
+                }
+                else
+                {
+                    e.CellStyle!.BackColor = Color.White;
+                }
+
+                // Highlight winner (first row)
+                if (e.RowIndex == 0 && dgvSender.Rows.Count > 0)
+                {
+                    e.CellStyle!.BackColor = Color.FromArgb(240, 255, 240);
+                    e.CellStyle!.Font = new Font(dgvSender.Font, FontStyle.Bold);
+                }
+
+                // Color for Percentage column
+                if (dgvSender.Columns[e.ColumnIndex].Name == "Percentage" && e.Value != null)
+                {
+                    e.CellStyle!.ForeColor = COLOR_INFO;
+                    e.CellStyle!.Font = new Font(dgvSender.Font, FontStyle.Bold);
+                }
+            };
+
+            // Refresh button
+            Button btnRefreshVotes = new()
             {
-                Text = "🏆 Declare Winner",
-                Location = new Point(340, 10),
-                Size = new Size(150, 40),
-                BackColor = Color.FromArgb(46, 125, 50),
+                Text = "🔄 Refresh Now",
+                Location = new(600, 15),
+                Size = new(130, 35),
+                BackColor = COLOR_SECONDARY,
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Font = new("Segoe UI", 9, FontStyle.Bold),
+                FlatAppearance = { BorderSize = 0 }
             };
-            btnDeclareWinner.FlatAppearance.BorderSize = 0;
-            btnDeclareWinner.Click += (s, e) => DeclareWinner();
 
-            buttonPanel.Controls.Add(btnRefreshResults);
-            buttonPanel.Controls.Add(btnExportResults);
-            buttonPanel.Controls.Add(btnDeclareWinner);
+            // Toggle Refresh Button
+            Button btnToggleRefresh = new()
+            {
+                Text = "⏸ PAUSE AUTO",
+                Location = new(600, 55),
+                Size = new(130, 25),
+                BackColor = Color.Gray,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new("Segoe UI", 8, FontStyle.Bold),
+                FlatAppearance = { BorderSize = 0 }
+            };
 
-            mainPanel.Controls.Add(lblTitle);
-            mainPanel.Controls.Add(lblStatus);
-            mainPanel.Controls.Add(dgvResults);
-            mainPanel.Controls.Add(buttonPanel);
+            // Timer setup
+            System.Windows.Forms.Timer refreshTimer = new() { Interval = 10000 };
+
+            btnRefreshVotes.Click += async (s, e) =>
+            {
+                await LoadVoteMonitoringDataAsync(dgvVoteMonitoring, statsPanel);
+            };
+
+            btnToggleRefresh.Click += (s, e) =>
+            {
+                var lblRefreshStatus = statsPanel.Controls.Find("lblRefreshStatus", true).FirstOrDefault() as Label;
+                if (refreshTimer.Enabled)
+                {
+                    refreshTimer.Stop();
+                    btnToggleRefresh.Text = "▶ RESUME AUTO";
+                    btnToggleRefresh.BackColor = COLOR_SUCCESS;
+                    if (lblRefreshStatus != null)
+                    {
+                        lblRefreshStatus.Text = "⏱️ Auto-refresh: OFF";
+                        lblRefreshStatus.ForeColor = Color.Gray;
+                    }
+                }
+                else
+                {
+                    refreshTimer.Start();
+                    btnToggleRefresh.Text = "⏸ PAUSE AUTO";
+                    btnToggleRefresh.BackColor = Color.Gray;
+                    if (lblRefreshStatus != null)
+                    {
+                        lblRefreshStatus.Text = "⏱️ Auto-refresh: ON";
+                        lblRefreshStatus.ForeColor = COLOR_SUCCESS;
+                    }
+                }
+            };
+
+            refreshTimer.Tick += async (s, e) => await LoadVoteMonitoringDataAsync(dgvVoteMonitoring, statsPanel);
+            refreshTimer.Start();
+
+            statsPanel.Controls.Add(btnRefreshVotes);
+            statsPanel.Controls.Add(btnToggleRefresh);
+            // Add controls to main panel
+            mainPanel.Controls.Add(statsPanel);
+            mainPanel.Controls.Add(dgvVoteMonitoring);
             pnlMainContent.Controls.Add(mainPanel);
 
-            // Load results
-            _ = LoadResultsAsync(dgvResults, lblStatus);
+            // Load initial data
+            _ = LoadVoteMonitoringDataAsync(dgvVoteMonitoring, statsPanel);
         }
 
-        private async Task LoadResultsAsync(DataGridView dgv, Label lblStatus)
+        private async Task LoadVoteMonitoringDataAsync(DataGridView dgv, Panel statsPanel)
         {
             try
             {
-                dgv.Rows.Clear();
-                Cursor = Cursors.WaitCursor;
+                // Prevent concurrent loading
+                if (dgv.Tag != null && dgv.Tag.ToString() == "Loading") return;
+                dgv.Tag = "Loading";
 
-                // Check election status
-                var statusResponse = await _client.GetAsync("api/admin/election-status");
-                if (statusResponse.IsSuccessStatusCode)
+                bool isInitialLoad = dgv.Rows.Count == 0;
+                if (isInitialLoad) Cursor = Cursors.WaitCursor;
+
+                // 1. Get Overall Statistics
+                var statsResponse = await _client.GetAsync("api/admin/vote-statistics");
+                if (statsResponse.IsSuccessStatusCode)
                 {
-                    var status = await statusResponse.Content.ReadFromJsonAsync<JsonElement>();
-                    bool isActive = status.GetProperty("isActive").GetBoolean();
-
-                    if (!isActive)
+                    var statsResult = await statsResponse.Content.ReadFromJsonAsync<JsonElement>();
+                    if (statsResult.TryGetProperty("success", out var s) && s.GetBoolean())
                     {
-                        lblStatus.Text = "⏸ ELECTION IS NOT ACTIVE - No results available";
-                        lblStatus.ForeColor = Color.Orange;
-                        return;
-                    }
+                        int totalVotes = GetJsonInt(statsResult, "totalVotes") ?? 0;
+                        double participation = 0;
+                        if (statsResult.TryGetProperty("voterTurnout", out var vt))
+                            participation = vt.GetDouble();
 
-                    lblStatus.Text = "✅ ELECTION IS ACTIVE - Loading results...";
-                    lblStatus.ForeColor = Color.Green;
+                        if (statsPanel.Controls.Find("lblTotalVotes", true).FirstOrDefault() is Label lblTotalVotes)
+                            lblTotalVotes.Text = $"Total Votes: {totalVotes:N0}";
+                        if (statsPanel.Controls.Find("lblParticipation", true).FirstOrDefault() is Label lblParticipation)
+                            lblParticipation.Text = $"Participation: {participation:0.0}%";
+                        if (statsPanel.Controls.Find("lblLastUpdate", true).FirstOrDefault() is Label lblLastUpdate)
+                            lblLastUpdate.Text = $"Last update: {DateTime.Now:HH:mm:ss}";
+                    }
                 }
 
-                // ✅ FIXED: Use real election results endpoint
-                var response = await _client.GetAsync("api/admin/election-results");
-
-                if (response.IsSuccessStatusCode)
+                // 2. Get Per-Candidate Results
+                var resultsResponse = await _client.GetAsync("api/admin/election-results");
+                if (resultsResponse.IsSuccessStatusCode)
                 {
-                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                    var resultsJson = await resultsResponse.Content.ReadFromJsonAsync<JsonElement>();
 
-                    if (result.TryGetProperty("results", out var resultsArray))
+                    if (resultsJson.TryGetProperty("success", out var success) && success.GetBoolean())
                     {
-                        int position = 1;
-                        foreach (var candidate in resultsArray.EnumerateArray())
+                        if (resultsJson.TryGetProperty("results", out var resultsArray))
                         {
-                            dgv.Rows.Add(
-                                position,
-                                candidate.GetProperty("fullName").GetString(),
-                                candidate.GetProperty("partyAffiliation").GetString(),
-                                candidate.GetProperty("region").GetString(),
-                                candidate.GetProperty("votes").GetInt32(),
-                                $"{candidate.GetProperty("percentage").GetDouble():0.00}%",
-                                position == 1 ? "🏆 WINNER" : "RUNNING"
-                            );
-                            position++;
-                        }
+                            // Store current selection
+                            int selectedRowIndex = dgv.SelectedRows.Count > 0 ? dgv.SelectedRows[0].Index : -1;
 
-                        // Highlight winner
-                        if (dgv.Rows.Count > 0)
-                        {
-                            dgv.Rows[0].DefaultCellStyle.BackColor = Color.FromArgb(255, 255, 200);
-                            dgv.Rows[0].DefaultCellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                            dgv.Rows.Clear();
+
+                            int totalVotesInResults = GetJsonInt(resultsJson, "totalVotes") ?? 0;
+                            int rowIndex = 0;
+
+                            foreach (var candidate in resultsArray.EnumerateArray())
+                            {
+                                string name = GetJsonString(candidate, "FullName", "fullName", "CandidateName");
+                                string party = GetJsonString(candidate, "PartyAffiliation", "Party", "partyAffiliation");
+                                int votes = GetJsonInt(candidate, "Votes", "votes") ?? 0;
+                                double percentage = totalVotesInResults > 0 ? (votes * 100.0 / totalVotesInResults) : 0;
+
+                                // Get last update or use current time
+                                string lastUpdate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                                // Add row with proper columns
+                                dgv.Rows.Add(
+                                    name,                    // Candidate Name
+                                    party,                   // Party
+                                    votes.ToString("N0"),    // Votes
+                                    $"{percentage:0.0}%",    // Percentage
+                                    lastUpdate               // Last Update Date
+                                );
+
+                                // Highlight first place
+                                if (rowIndex == 0 && votes > 0)
+                                {
+                                    dgv.Rows[rowIndex].DefaultCellStyle.BackColor = Color.FromArgb(240, 255, 240);
+                                    dgv.Rows[rowIndex].DefaultCellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                                }
+
+                                rowIndex++;
+                            }
+
+                            // Restore selection
+                            if (selectedRowIndex >= 0 && selectedRowIndex < dgv.Rows.Count)
+                                dgv.Rows[selectedRowIndex].Selected = true;
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "❌ Error loading results";
-                lblStatus.ForeColor = Color.Red;
-                MessageBox.Show($"Error: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Console.WriteLine($"Vote monitoring error: {ex.Message}");
+
+                // Show error in stats panel
+                if (statsPanel.Controls.Find("lblLastUpdate", true).FirstOrDefault() is Label lblLastUpdate)
+                    lblLastUpdate.Text = $"Error: {DateTime.Now:HH:mm:ss}";
             }
             finally
             {
+                dgv.Tag = null;
                 Cursor = Cursors.Default;
             }
-        }
-
-        private void ExportResultsToPDF()
-        {
-            MessageBox.Show("PDF export feature coming soon!\n\n" +
-                "You can use libraries like:\n" +
-                "• iTextSharp\n" +
-                "• QuestPDF\n" +
-                "• PDFSharp",
-                "Export to PDF", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void DeclareWinner()
-        {
-            MessageBox.Show("🏆 WINNER DECLARED!\n\n" +
-                "The election results have been finalized and winner is declared.\n" +
-                "This will close the election and make results public.",
-                "Declare Winner", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         #endregion
 
         #region Election Control
         private void CreateElectionControlPanel()
         {
-            Panel mainPanel = new Panel
+            Panel mainPanel = new()
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(20)
+                Padding = new(20)
             };
 
-            // Status Panel
-            Panel statusPanel = new Panel
+            // Current status panel
+            Panel statusPanel = new()
             {
-                Location = new Point(20, 20),
-                Size = new Size(pnlMainContent.Width - 60, 100),
+                Height = 120,
+                Dock = DockStyle.Top,
                 BackColor = Color.FromArgb(240, 245, 255),
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(15),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Padding = new(20)
             };
 
-            Label lblStatusTitle = new Label
+            Label lblStatusTitle = new()
             {
-                Text = "📊 ELECTION STATUS",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                ForeColor = Color.Navy,
-                Location = new Point(15, 15),
-                Size = new Size(200, 30)
+                Text = "📊 CURRENT ELECTION STATUS",
+                Font = new("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = COLOR_DARK,
+                Location = new(20, 20),
+                AutoSize = true
             };
 
-            Label lblStatusValue = new Label
+            Label lblStatusValue = new()
             {
-                Name = "lblElectionStatusControl",
-                Text = "Loading...",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Location = new Point(15, 50),
-                Size = new Size(300, 25),
-                ForeColor = Color.Gray
+                Name = "lblElectionStatus",
+                Text = "Loading election status...",
+                Font = new("Segoe UI", 18, FontStyle.Bold),
+                Location = new(20, 60),
+                Size = new(400, 35),
+                ForeColor = COLOR_WARNING
             };
 
-            Label lblVotingStatus = new Label
+            Label lblVotingStatus = new()
             {
-                Name = "lblVotingStatusControl",
+                Name = "lblVotingStatus",
                 Text = "",
-                Font = new Font("Segoe UI", 11),
-                Location = new Point(350, 50),
-                Size = new Size(200, 25)
+                Font = new("Segoe UI", 14),
+                Location = new(450, 65),
+                AutoSize = true,
+                ForeColor = COLOR_INFO
             };
 
             statusPanel.Controls.Add(lblStatusTitle);
             statusPanel.Controls.Add(lblStatusValue);
             statusPanel.Controls.Add(lblVotingStatus);
 
-            // Control Buttons Panel
-            Panel controlPanel = new Panel
+            // Control buttons panel
+            Panel controlPanel = new()
             {
-                Location = new Point(20, 140),
-                Size = new Size(pnlMainContent.Width - 60, 120),
+                Height = 200,
+                Dock = DockStyle.Top,
+                Location = new(0, 140),
+                Size = new(mainPanel.Width, 200),
                 BackColor = Color.White,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Padding = new(20, 30, 20, 20)
             };
 
-            Button btnStartElection = new Button
-            {
-                Name = "btnStartElection",
-                Text = "▶ START ELECTION",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.FromArgb(46, 125, 50), // Green
-                Location = new Point(20, 20),
-                Size = new Size(200, 50),
-                Cursor = Cursors.Hand,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnStartElection.FlatAppearance.BorderSize = 0;
+            // Create buttons
+            Button btnStartElection = CreateElectionButton("▶ START ELECTION", COLOR_SUCCESS, 20, 20);
+            Button btnStopElection = CreateElectionButton("⏹ STOP ELECTION", COLOR_DANGER, 250, 20);
+            Button btnToggleVoting = CreateElectionButton("⏯ TOGGLE VOTING", COLOR_INFO, 480, 20);
+            Button btnViewResults = CreateElectionButton("📊 VIEW RESULTS", COLOR_SECONDARY, 710, 20);
+
+            // Set button sizes
+            btnStartElection.Size = new(200, 60);
+            btnStopElection.Size = new(200, 60);
+            btnToggleVoting.Size = new(200, 60);
+            btnViewResults.Size = new(200, 60);
+
+            // Add event handlers
             btnStartElection.Click += async (s, e) => await StartElectionAsync();
-
-            Button btnStopElection = new Button
-            {
-                Name = "btnStopElection",
-                Text = "⏹ STOP ELECTION",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.FromArgb(198, 40, 40), // Red
-                Location = new Point(240, 20),
-                Size = new Size(200, 50),
-                Cursor = Cursors.Hand,
-                FlatStyle = FlatStyle.Flat,
-                Enabled = false
-            };
-            btnStopElection.FlatAppearance.BorderSize = 0;
             btnStopElection.Click += async (s, e) => await StopElectionAsync();
-
-            Button btnToggleVoting = new Button
-            {
-                Name = "btnToggleVoting",
-                Text = "⏯ TOGGLE VOTING",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.FromArgb(21, 101, 192), // Blue
-                Location = new Point(460, 20),
-                Size = new Size(200, 50),
-                Cursor = Cursors.Hand,
-                FlatStyle = FlatStyle.Flat,
-                Enabled = false
-            };
-            btnToggleVoting.FlatAppearance.BorderSize = 0;
             btnToggleVoting.Click += async (s, e) => await ToggleVotingAsync();
+            btnViewResults.Click += (s, e) => PanelResults_Click(s, e);
 
-            Button btnViewResults = new Button
-            {
-                Text = "📊 VIEW RESULTS",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.FromArgb(123, 31, 162), // Purple
-                Location = new Point(680, 20),
-                Size = new Size(200, 50),
-                Cursor = Cursors.Hand,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnViewResults.FlatAppearance.BorderSize = 0;
-            btnViewResults.Click += (s, e) => PanelResult_Click(this, EventArgs.Empty);
-
+            // Add buttons to control panel
             controlPanel.Controls.Add(btnStartElection);
             controlPanel.Controls.Add(btnStopElection);
             controlPanel.Controls.Add(btnToggleVoting);
             controlPanel.Controls.Add(btnViewResults);
 
-            // Settings Panel
-            Panel settingsPanel = new Panel
+            // Election settings panel
+            Panel settingsPanel = new()
             {
-                Location = new Point(20, 280),
-                Size = new Size(pnlMainContent.Width - 60, 200),
-                BackColor = Color.FromArgb(250, 250, 250),
+                Height = 180,
+                Dock = DockStyle.Top,
+                Location = new(0, 360),
+                Size = new(mainPanel.Width, 180),
+                BackColor = Color.FromArgb(250, 250, 255),
                 BorderStyle = BorderStyle.FixedSingle,
-                Padding = new Padding(15),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Padding = new(20, 20, 20, 20)
             };
 
-            Label lblSettingsTitle = new Label
+            Label lblSettingsTitle = new()
             {
                 Text = "⚙️ ELECTION SETTINGS",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = Color.Navy,
-                Location = new Point(15, 15),
-                Size = new Size(200, 30)
+                Font = new("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = COLOR_DARK,
+                Location = new(20, 20),
+                AutoSize = true
             };
 
-            // Duration settings
-            Label lblDuration = new Label
+            Label lblDuration = new()
             {
-                Text = "Election Duration (days):",
-                Location = new Point(15, 60),
-                Size = new Size(150, 25)
+                Text = "Default Election Duration (days):",
+                Font = new("Segoe UI", 11),
+                Location = new(20, 70),
+                Size = new(200, 25),
+                ForeColor = Color.DimGray
             };
 
-            NumericUpDown nudDuration = new NumericUpDown
+            NumericUpDown nudDuration = new()
             {
-                Location = new Point(170, 60),
-                Size = new Size(100, 25),
+                Location = new(250, 70),
+                Size = new(100, 30),
                 Minimum = 1,
                 Maximum = 30,
-                Value = 7
+                Value = 7,
+                Font = new("Segoe UI", 11)
             };
 
-            Button btnSaveSettings = new Button
+            Button btnSaveSettings = new()
             {
                 Text = "💾 SAVE SETTINGS",
-                Location = new Point(300, 60),
-                Size = new Size(150, 30),
+                Location = new(380, 70),
+                Size = new(150, 30),
                 BackColor = Color.FromArgb(96, 125, 139),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Font = new("Segoe UI", 10, FontStyle.Bold)
             };
             btnSaveSettings.FlatAppearance.BorderSize = 0;
+            btnSaveSettings.Click += (s, e) =>
+            {
+                MessageBox.Show($"Election duration set to {nudDuration.Value} days", "Settings Saved",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
 
             settingsPanel.Controls.Add(lblSettingsTitle);
             settingsPanel.Controls.Add(lblDuration);
@@ -1870,11 +1813,28 @@ Admin Remarks:
             pnlMainContent.Controls.Add(mainPanel);
 
             // Load election status
-            _ = LoadElectionControlStatusAsync(lblStatusValue, lblVotingStatus,
-                btnStartElection, btnStopElection, btnToggleVoting);
+            _ = LoadElectionControlStatusAsync(lblStatusValue, lblVotingStatus, btnStartElection, btnStopElection, btnToggleVoting);
         }
 
-        private async Task LoadElectionControlStatusAsync(Label lblStatus, Label lblVoting,
+        private static Button CreateElectionButton(string text, Color color, int x, int y)
+        {
+            Button btn = new()
+            {
+                Text = text,
+                Location = new(x, y),
+                Size = new(200, 60),
+                Font = new("Segoe UI", 13, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = color,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                TextAlign = ContentAlignment.MiddleCenter,
+                FlatAppearance = { BorderSize = 0 }
+            };
+            return btn;
+        }
+
+        private async Task LoadElectionControlStatusAsync(Label lblStatus, Label lblVotingStatus,
             Button btnStart, Button btnStop, Button btnToggle)
         {
             try
@@ -1883,14 +1843,18 @@ Admin Remarks:
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    var isActive = result.GetProperty("isActive").GetBoolean();
-                    var votingOpen = result.GetProperty("votingOpen").GetBoolean();
+                    bool isActive = result.GetProperty("isActive").GetBoolean();
+                    bool votingOpen = result.GetProperty("votingOpen").GetBoolean();
 
-                    lblStatus.Text = isActive ? "✅ ELECTION IS LIVE" : "⏸ ELECTION INACTIVE";
-                    lblStatus.ForeColor = isActive ? Color.Green : Color.OrangeRed;
+                    lblStatus.Text = isActive
+                        ? (votingOpen ? "✅ ELECTION ACTIVE" : "⏸ ELECTION PAUSED")
+                        : "⏸ ELECTION INACTIVE";
+                    lblStatus.ForeColor = isActive ? COLOR_SUCCESS : COLOR_WARNING;
 
-                    lblVoting.Text = votingOpen ? "🗳️ Voting: OPEN" : "⏸ Voting: CLOSED";
-                    lblVoting.ForeColor = votingOpen ? Color.Green : Color.Red;
+                    lblVotingStatus.Text = isActive
+                        ? (votingOpen ? "🗳️ Voting: OPEN" : "⏸ Voting: CLOSED")
+                        : "";
+                    lblVotingStatus.ForeColor = votingOpen ? COLOR_SUCCESS : COLOR_WARNING;
 
                     btnStart.Enabled = !isActive;
                     btnStop.Enabled = isActive;
@@ -1899,123 +1863,81 @@ Admin Remarks:
                     if (isActive)
                     {
                         btnToggle.Text = votingOpen ? "⏸ PAUSE VOTING" : "▶ RESUME VOTING";
-                        btnToggle.BackColor = votingOpen ? Color.Orange : Color.Green;
+                        btnToggle.BackColor = votingOpen ? COLOR_WARNING : COLOR_SUCCESS;
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                lblStatus.Text = "❌ Error loading status";
-                lblStatus.ForeColor = Color.Red;
+                lblStatus.Text = "❌ ERROR LOADING STATUS";
+                lblStatus.ForeColor = COLOR_DANGER;
+                lblVotingStatus.Text = "Failed to load voting status";
             }
         }
 
-        private async Task StartElectionAsync()
+        private Task StartElectionAsync()
         {
-            using (var startForm = new Form())
+            using var startForm = new Form();
+            startForm.Text = "Start Election";
+            startForm.Size = new(500, 350);
+            startForm.StartPosition = FormStartPosition.CenterParent;
+            startForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+
+            Label lblEndDate = new()
             {
-                startForm.Text = "Start Election";
-                startForm.Size = new Size(500, 350);
-                startForm.StartPosition = FormStartPosition.CenterParent;
-                startForm.FormBorderStyle = FormBorderStyle.FixedDialog;
-                startForm.MaximizeBox = false;
-                startForm.MinimizeBox = false;
+                Text = "⏰ Election End Date & Time:",
+                Location = new(20, 100),
+                Size = new(200, 25),
+                Font = new("Segoe UI", 10, FontStyle.Bold)
+            };
 
-                Label lblTitle = new Label
+            DateTimePicker dtpEndDate = new()
+            {
+                Location = new(230, 100),
+                Width = 200,
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "yyyy-MM-dd HH:mm",
+                ShowUpDown = true,
+                Value = DateTime.Now.AddDays(7),
+                MinDate = DateTime.Now.AddHours(1)
+            };
+
+            Button btnConfirm = new()
+            {
+                Text = "🚀 START ELECTION",
+                Location = new(150, 200),
+                Size = new(200, 40),
+                BackColor = COLOR_SUCCESS,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new("Segoe UI", 11, FontStyle.Bold),
+                FlatAppearance = { BorderSize = 0 }
+            };
+
+            btnConfirm.Click += async (s, e) =>
+            {
+                var request = new { EndTime = dtpEndDate.Value };
+                var response = await _client.PostAsJsonAsync("api/admin/start-election", request);
+                if (response.IsSuccessStatusCode)
                 {
-                    Text = "🏛️ START NEW ELECTION",
-                    Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                    ForeColor = Color.Navy,
-                    Location = new Point(20, 20),
-                    Size = new Size(400, 30)
-                };
+                    MessageBox.Show("✅ Election started successfully!", "Success",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    startForm.Close();
+                    await UpdateElectionStatusHeaderAsync();
+                    RefreshCurrentView();
+                }
+            };
 
-                Label lblElectionTitle = new Label
-                {
-                    Text = "Election Title:",
-                    Location = new Point(20, 70),
-                    Size = new Size(100, 25)
-                };
-
-                TextBox txtTitle = new TextBox
-                {
-                    Text = "General Election 2024",
-                    Location = new Point(130, 70),
-                    Size = new Size(300, 25)
-                };
-
-                Label lblEndTime = new Label
-                {
-                    Text = "End Date & Time:",
-                    Location = new Point(20, 110),
-                    Size = new Size(100, 25)
-                };
-
-                DateTimePicker dtpEnd = new DateTimePicker
-                {
-                    Location = new Point(130, 110),
-                    Size = new Size(300, 25),
-                    Format = DateTimePickerFormat.Custom,
-                    CustomFormat = "yyyy-MM-dd HH:mm",
-                    MinDate = DateTime.Now.AddHours(1),
-                    Value = DateTime.Now.AddDays(7)
-                };
-
-                Button btnConfirm = new Button
-                {
-                    Text = "🚀 START ELECTION",
-                    Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    BackColor = Color.Green,
-                    Location = new Point(150, 180),
-                    Size = new Size(200, 40),
-                    FlatStyle = FlatStyle.Flat
-                };
-                btnConfirm.FlatAppearance.BorderSize = 0;
-
-                btnConfirm.Click += async (s, e) =>
-                {
-                    var request = new
-                    {
-                        EndTime = dtpEnd.Value,
-                        ElectionTitle = txtTitle.Text,
-                        Description = "Election started by administrator"
-                    };
-
-                    try
-                    {
-                        var response = await _client.PostAsJsonAsync("api/admin/start-election", request);
-                        if (response.IsSuccessStatusCode)
-                        {
-                            MessageBox.Show("✅ Election started successfully!\nVoting is now open.",
-                                "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            startForm.Close();
-                            RefreshCurrentView();
-                        }
-                        else
-                        {
-                            var error = await response.Content.ReadAsStringAsync();
-                            MessageBox.Show($"Failed to start election: {error}",
-                                "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error: {ex.Message}", "Error",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                };
-
-                startForm.Controls.AddRange(new Control[] { lblTitle, lblElectionTitle, txtTitle,
-                    lblEndTime, dtpEnd, btnConfirm });
-                startForm.ShowDialog();
-            }
+            startForm.Controls.Add(lblEndDate);
+            startForm.Controls.Add(dtpEndDate);
+            startForm.Controls.Add(btnConfirm);
+            startForm.ShowDialog();
+            return Task.CompletedTask;
         }
 
         private async Task StopElectionAsync()
         {
-            var result = MessageBox.Show("⚠️ ARE YOU SURE YOU WANT TO STOP THE ELECTION?\n\n" +
-                "This will immediately close voting and cannot be undone!",
+            var result = MessageBox.Show("Are you sure you want to stop the election?\nThis will end voting immediately.",
                 "Confirm Stop Election", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
             if (result == DialogResult.Yes)
@@ -2025,8 +1947,9 @@ Admin Remarks:
                     var response = await _client.PostAsync("api/admin/stop-election", null);
                     if (response.IsSuccessStatusCode)
                     {
-                        MessageBox.Show("⏹ Election stopped successfully!\nVoting is now closed.",
-                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("⏹ Election stopped successfully!", "Success",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        await UpdateElectionStatusHeaderAsync();
                         RefreshCurrentView();
                     }
                 }
@@ -2040,50 +1963,517 @@ Admin Remarks:
 
         private async Task ToggleVotingAsync()
         {
+            var result = MessageBox.Show("Are you sure you want to toggle voting status?",
+                "Confirm Toggle Voting", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    var response = await _client.PostAsync("api/admin/toggle-voting", null);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var resultJson = await response.Content.ReadFromJsonAsync<JsonElement>();
+                        string message = resultJson.TryGetProperty("message", out var msg) ? msg.GetString() ?? "Success" : "Success";
+                        MessageBox.Show(message, "Voting Status",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        await UpdateElectionStatusHeaderAsync();
+                        RefreshCurrentView();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private static async Task ShowCandidateDetailsAsync(HttpClient client, int candidateId)
+        {
             try
             {
-                var response = await _client.PostAsync("api/admin/toggle-voting", null);
+                var response = await client.GetAsync($"api/admin/candidate-details/{candidateId}");
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<JsonElement>();
-                    var message = result.GetProperty("message").GetString();
-                    MessageBox.Show(message, "Voting Status",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    RefreshCurrentView();
+                    if (result.TryGetProperty("success", out var s) && s.GetBoolean())
+                    {
+                        var candidate = result.GetProperty("candidate");
+                        string details = FormatCompleteCandidateDetails(candidate);
+
+                        MessageBox.Show(details, "Candidate Profile",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error loading details: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
 
-        #region Logout
-        private void BtnLogout_Click(object sender, EventArgs e)
+        #region Results Module
+        private void CreateResultsPanel()
+        {
+            Panel mainPanel = new()
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new(20)
+            };
+
+            Label lblStatusCheck = new()
+            {
+                Text = "Checking election status...",
+                Font = new("Segoe UI", 14),
+                Location = new(20, 20),
+                AutoSize = true,
+                ForeColor = COLOR_WARNING
+            };
+
+            mainPanel.Controls.Add(lblStatusCheck);
+            pnlMainContent.Controls.Add(mainPanel);
+
+            _ = LoadResultsPanelAsync(mainPanel, lblStatusCheck);
+        }
+
+        private async Task LoadResultsPanelAsync(Panel mainPanel, Label lblStatusCheck)
+        {
+            try
+            {
+                var response = await _client.GetAsync("api/admin/election-status");
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                    bool isActive = result.TryGetProperty("isActive", out var ia) && ia.GetBoolean();
+
+                    mainPanel.Controls.Remove(lblStatusCheck);
+
+                    if (isActive)
+                    {
+                        ShowElectionActiveMessage(mainPanel);
+                    }
+                    else
+                    {
+                        CreateResultsGrid(mainPanel);
+                    }
+                }
+            }
+            catch
+            {
+                lblStatusCheck.Text = "Error checking election status";
+                lblStatusCheck.ForeColor = COLOR_DANGER;
+            }
+        }
+
+        private static void ShowElectionActiveMessage(Panel mainPanel)
+        {
+            Label lblMessage = new()
+            {
+                Text = "📊 ELECTION RESULTS\n════════════════════════════\n\n" +
+                       "Results are available only after the election ends.\n" +
+                       "Current election status: ACTIVE\n\n" +
+                       "Please wait for the election to finish or\n" +
+                       "stop the election from Election Control panel.",
+                Font = new("Segoe UI", 16),
+                Location = new(50, 50),
+                Size = new(600, 200),
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = COLOR_WARNING
+            };
+
+            mainPanel.Controls.Add(lblMessage);
+        }
+
+        private void CreateResultsGrid(Panel mainPanel)
+        {
+            Label lblTitle = new()
+            {
+                Text = "🏆 ELECTION RESULTS - FINAL",
+                Font = new("Segoe UI", 24, FontStyle.Bold),
+                ForeColor = COLOR_DARK,
+                Location = new(20, 20),
+                AutoSize = true
+            };
+
+            DataGridView dgv = new()
+            {
+                Location = new(20, 80),
+                Size = new(mainPanel.Width - 60, mainPanel.Height - 150),
+                ReadOnly = true,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White,
+                ColumnHeadersHeight = 45,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
+            };
+
+            // Set header style
+            dgv.ColumnHeadersDefaultCellStyle = new()
+            {
+                BackColor = COLOR_SECONDARY,
+                ForeColor = Color.White,
+                Font = new("Segoe UI", 10, FontStyle.Bold),
+                Alignment = DataGridViewContentAlignment.MiddleCenter,
+                Padding = new(0, 5, 0, 5)
+            };
+            dgv.EnableHeadersVisualStyles = false;
+
+            dgv.Columns.Add("Position", "🏅 Position");
+            dgv.Columns.Add("Candidate", "👤 Candidate");
+            dgv.Columns.Add("Party", "🏛️ Party");
+            dgv.Columns.Add("Votes", "🗳️ Votes");
+            dgv.Columns.Add("Percentage", "📊 Percentage");
+            dgv.Columns.Add("Status", "📈 Status");
+
+            // Export Button
+            Button btnExport = new()
+            {
+                Text = "📥 EXPORT RESULTS",
+                Location = new(mainPanel.Width - 200, 25),
+                Size = new(160, 35),
+                BackColor = COLOR_SUCCESS,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new("Segoe UI", 9, FontStyle.Bold),
+                FlatAppearance = { BorderSize = 0 }
+            };
+            btnExport.Click += (s, e) => ExportResults(dgv);
+
+            mainPanel.Controls.Add(lblTitle);
+            mainPanel.Controls.Add(btnExport);
+            mainPanel.Controls.Add(dgv);
+            _ = LoadResultsDataAsync(dgv);
+        }
+
+        private static void ExportResults(DataGridView dgv)
+        {
+            if (dgv.Rows.Count == 0)
+            {
+                MessageBox.Show("No results to export.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            System.Text.StringBuilder sb = new();
+            sb.AppendLine("📜 OFFICIAL ELECTION RESULTS");
+            sb.AppendLine("══════════════════════════════");
+            sb.AppendLine($"Exported on: {DateTime.Now:f}\n");
+
+            foreach (DataGridViewRow row in dgv.Rows)
+            {
+                if (row.IsNewRow) continue;
+                string pos = row.Cells["Position"].Value?.ToString() ?? "";
+                string name = row.Cells["Candidate"].Value?.ToString() ?? "";
+                string party = row.Cells["Party"].Value?.ToString() ?? "";
+                string votes = row.Cells["Votes"].Value?.ToString() ?? "";
+                string pct = row.Cells["Percentage"].Value?.ToString() ?? "";
+                string status = row.Cells["Status"].Value?.ToString() ?? "";
+
+                sb.AppendLine($"{pos.PadRight(8)} {name.PadRight(20)} {party.PadRight(15)} {votes.PadLeft(6)} votes ({pct}) - {status}");
+            }
+
+            sb.AppendLine("\n══════════════════════════════");
+            sb.AppendLine("Verified by ETH Election System");
+
+            // In a real scenario, this would save to a .txt or .csv
+            // For now, we show it in a formatted dialog for the admin to copy
+            Form reportForm = new()
+            {
+                Text = "Election Results Report",
+                Size = new(600, 500),
+                StartPosition = FormStartPosition.CenterParent
+            };
+
+            TextBox txtReport = new TextBox
+            {
+                Multiline = true,
+                ReadOnly = true,
+                Dock = DockStyle.Fill,
+                Font = new Font("Consolas", 10),
+                Text = sb.ToString(),
+                ScrollBars = ScrollBars.Vertical
+            };
+
+            reportForm.Controls.Add(txtReport);
+            reportForm.ShowDialog();
+        }
+
+        private async Task LoadResultsDataAsync(DataGridView dgv)
+        {
+            try
+            {
+                dgv.Rows.Clear();
+                Cursor = Cursors.WaitCursor;
+
+                // Get results from AdminController
+                var response = await _client.GetAsync("api/admin/election-results");
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+                    if (result.TryGetProperty("success", out var success) && success.GetBoolean())
+                    {
+                        if (result.TryGetProperty("results", out var results))
+                        {
+                            int position = 1;
+                            int totalVotes = result.TryGetProperty("totalVotes", out var tv) ? tv.GetInt32() : 0;
+
+                            foreach (var candidate in results.EnumerateArray())
+                            {
+                                int votes = GetJsonInt(candidate, "Votes", "votes") ?? 0;
+                                double percentage = totalVotes > 0 ? (votes * 100.0 / totalVotes) : 0;
+
+                                string positionText = position switch
+                                {
+                                    1 => "🏆 1st",
+                                    2 => "🥈 2nd",
+                                    3 => "🥉 3rd",
+                                    _ => $"{position}th"
+                                };
+
+                                string statusText = position == 1 ? "WINNER 🏆" : "Runner-up";
+
+                                dgv.Rows.Add(
+                                    positionText,
+                                    GetJsonString(candidate, "FullName", "fullName"),
+                                    GetJsonString(candidate, "PartyAffiliation", "Party", "partyAffiliation"),
+                                    votes,
+                                    $"{percentage:0.0}%",
+                                    statusText
+                                );
+
+                                // Highlight winner
+                                if (position == 1)
+                                {
+                                    dgv.Rows[0].DefaultCellStyle.BackColor = Color.FromArgb(255, 255, 200);
+                                    dgv.Rows[0].DefaultCellStyle.Font = new Font(dgv.Font, FontStyle.Bold);
+                                }
+
+                                position++;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading results: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
+        }
+        #endregion
+
+        #region Helper Methods
+        private static string FormatCompleteCandidateDetails(JsonElement candidate)
+        {
+            return $@"👤 COMPLETE CANDIDATE DETAILS
+════════════════════════════════════════════════════════════════
+
+📛 BASIC INFORMATION:
+   Full Name:       {GetJsonString(candidate, "FullName", "fullName")}
+   Age:             {GetJsonString(candidate, "Age", "age")} years
+   Region:          {GetJsonString(candidate, "Region", "region")}
+   Party:           {GetJsonString(candidate, "PartyAffiliation", "partyAffiliation")}
+
+📞 CONTACT INFORMATION:
+   Email:           {GetJsonString(candidate, "Email", "email")}
+   Phone:           {GetJsonString(candidate, "Phone", "phone")}
+   Address:         N/A
+
+📊 APPLICATION STATUS:
+   Status:          {GetJsonString(candidate, "Status", "status")}
+   Approved:        {GetJsonString(candidate, "IsApproved", "isApproved")}
+   Application:     {GetJsonString(candidate, "ApplicationDate", "applicationDate")}
+   Approval Date:   {GetJsonString(candidate, "ApprovalDate", "approvalDate")}
+
+👤 USER ACCOUNT:
+   Username:        {GetJsonString(candidate, "Username", "username")}
+   User Role:       {GetJsonString(candidate, "UserRole", "userRole")}
+
+🎓 QUALIFICATIONS:
+   Education:       N/A
+   Experience:      N/A
+
+🗳️ VOTING STATISTICS:
+   Votes Received:  {GetJsonString(candidate, "VotesReceived", "votesReceived")}
+   Vote Percentage: {GetJsonString(candidate, "VotePercentage", "votePercentage")}%
+
+════════════════════════════════════════════════════════════════
+Candidate ID: {GetJsonString(candidate, "Id", "id")}";
+        }
+
+        private async Task ApproveCandidateAsync(int candidateId, string name, DataGridView dgv, ComboBox cmbStatus)
+        {
+            var result = MessageBox.Show($"Approve candidate: {name}?",
+                "Confirm Approval", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    // Use CandidateController endpoint
+                    var response = await _client.PutAsync($"api/candidate/approve/{candidateId}", null);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        MessageBox.Show("✅ Candidate approved successfully!", "Success",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        await LoadCandidatesAsync(dgv, cmbStatus?.SelectedItem?.ToString() ?? "All Candidates");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private async Task RejectCandidateAsync(int candidateId, string name, DataGridView dgv, ComboBox cmbStatus)
+        {
+            var result = MessageBox.Show($"Reject candidate: {name}?",
+                "Confirm Rejection", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    // Use CandidateController endpoint
+                    var response = await _client.PutAsync($"api/candidate/reject/{candidateId}", null);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        MessageBox.Show("❌ Candidate rejected!", "Success",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        await LoadCandidatesAsync(dgv, cmbStatus?.SelectedItem?.ToString() ?? "All Candidates");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        // JSON helper methods
+        private static string GetJsonString(JsonElement element, params string[] propertyNames)
+        {
+            foreach (var propertyName in propertyNames)
+            {
+                if (element.TryGetProperty(propertyName, out var prop))
+                {
+                    if (prop.ValueKind == JsonValueKind.String)
+                        return prop.GetString() ?? "N/A";
+                    else if (prop.ValueKind == JsonValueKind.Number)
+                        return prop.GetInt32().ToString();
+                    else if (prop.ValueKind == JsonValueKind.True || prop.ValueKind == JsonValueKind.False)
+                        return prop.GetBoolean() ? "Yes" : "No";
+                }
+            }
+            return "N/A";
+        }
+
+        private static int? GetJsonInt(JsonElement element, params string[] propertyNames)
+        {
+            foreach (var propertyName in propertyNames)
+            {
+                if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.Number)
+                    return prop.GetInt32();
+            }
+            return null;
+        }
+
+        private static string GetDateTimeString(JsonElement element, params string[] propertyNames)
+        {
+            foreach (var propertyName in propertyNames)
+            {
+                if (element.TryGetProperty(propertyName, out var prop) && prop.TryGetDateTime(out var date))
+                    return date.ToString("yyyy-MM-dd");
+            }
+            return "N/A";
+        }
+
+        private void Logout()
+        {
+            UserSession.Clear();
+            this.Hide();
+
+            FrmLogin loginForm = new();
+            loginForm.FormClosed += (s, e) => this.Close();
+            loginForm.Show();
+        }
+
+        private void BtnLogout_Click(object? sender, EventArgs e)
         {
             var result = MessageBox.Show("Are you sure you want to logout?",
                 "Confirm Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             if (result == DialogResult.Yes)
             {
-                UserSession.Clear();
-
-                // Hide current admin dashboard
-                this.Hide();
-
-                // Create and show login form
-                frmLogin loginForm = new frmLogin();
-
-                // When login form closes, also close admin dashboard
-                loginForm.FormClosed += (s, args) => this.Close();
-
-                // Show login form
-                loginForm.Show();
+                Logout();
             }
         }
         #endregion
 
+        #region Keyboard Shortcuts
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            switch (keyData)
+            {
+                case Keys.F5:
+                case Keys.Control | Keys.R:
+                    RefreshCurrentView();
+                    return true;
+
+                case Keys.Control | Keys.D:
+                    PanelDashboard_Click(this, EventArgs.Empty);
+                    return true;
+
+                case Keys.Control | Keys.C:
+                    PanelCandidate_Click(this, EventArgs.Empty);
+                    return true;
+
+                case Keys.Control | Keys.U:
+                    PanelUserManagement_Click(this, EventArgs.Empty);
+                    return true;
+
+                case Keys.Control | Keys.V:
+                    PanelVoteMonitoring_Click(this, EventArgs.Empty);
+                    return true;
+
+                case Keys.Control | Keys.E:
+                    PanelElectionControl_Click(this, EventArgs.Empty);
+                    return true;
+
+                case Keys.Control | Keys.L:
+                    Logout();
+                    return true;
+
+                case Keys.Escape:
+                    if (MessageBox.Show("Close application?", "Confirm",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                        this.Close();
+                    return true;
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+        #endregion
+
+        private void Label3_Click(object? sender, EventArgs e)
+        {
+            // This method is kept for compatibility with the designer
+        }
+
+        private void PanelCandidate_Paint(object? sender, PaintEventArgs e)
+        {
+            // This method is kept for compatibility with the designer
+        }
     }
 }

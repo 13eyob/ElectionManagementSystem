@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Http;
@@ -23,7 +23,7 @@ namespace Election.UI.Forms
             // SAME PORT AS frmLogin
             _client.BaseAddress = new Uri("https://localhost:7208");
 
-            // 🔥 ADDED: Center panel events
+            // ?? ADDED: Center panel events
             this.Load += (s, e) => CenterRegisterPanel();
             this.Resize += (s, e) => CenterRegisterPanel();
 
@@ -36,7 +36,7 @@ namespace Election.UI.Forms
         }
 
         /// <summary>
-        /// 🔥 ADDED: Centers the registration panel both horizontally and vertically
+        /// ?? ADDED: Centers the registration panel both horizontally and vertically
         /// </summary>
         private void CenterRegisterPanel()
         {
@@ -105,7 +105,7 @@ namespace Election.UI.Forms
                                    $"Role: {userData.Role}",
                                    "Success");
 
-                    new frmLogin().Show();
+                    new FrmLogin().Show();
                     this.Close();
                 }
                 else
@@ -282,7 +282,7 @@ namespace Election.UI.Forms
         /// </summary>
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            new frmLogin().Show();
+            new FrmLogin().Show();
             this.Close();
         }
 

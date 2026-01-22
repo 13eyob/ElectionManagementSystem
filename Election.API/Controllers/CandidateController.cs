@@ -9,16 +9,10 @@ namespace Election.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CandidateController : ControllerBase
+    public class CandidateController(AppDbContext db, IWebHostEnvironment environment) : ControllerBase
     {
-        private readonly AppDbContext _db;
-        private readonly IWebHostEnvironment _environment;
-
-        public CandidateController(AppDbContext db, IWebHostEnvironment environment)
-        {
-            _db = db;
-            _environment = environment;
-        }
+        private readonly AppDbContext _db = db;
+        private readonly IWebHostEnvironment _environment = environment;
 
         // ============ ✅ Get pending candidates for admin ============
         [HttpGet("pending")]
@@ -237,6 +231,52 @@ namespace Election.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // ============ ✅ NEW: Get candidate profile for My Profile link ============
+        [HttpGet("profile/{email}")]
+        public async Task<IActionResult> GetCandidateProfileForMyProfile(string email)
+        {
+            try
+            {
+                var candidate = await _db.Candidates
+                    .FirstOrDefaultAsync(c => c.Email == email);
+
+                if (candidate == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        data = (object?)null,
+                        message = "Candidate profile not found. You may not have submitted an application yet."
+                    });
+                }
+
+                // ✅ Return format that FrmCandidateProfile expects - wrapped in { success, data, message }
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        Id = candidate.Id,
+                        Name = candidate.FullName,
+                        Age = candidate.Age,
+                        Region = candidate.Region,
+                        Party = candidate.PartyAffiliation,
+                        Email = candidate.Email,
+                        Phone = candidate.Phone,
+                        ApplicationDate = candidate.ApplicationDate,
+                        Status = candidate.Status,
+                        IsApproved = candidate.IsApproved,
+                        IsRejected = candidate.IsRejected
+                    },
+                    message = "Candidate profile retrieved successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, data = (object?)null, message = ex.Message });
             }
         }
 
@@ -520,8 +560,8 @@ namespace Election.API.Controllers
         public string PartyAffiliation { get; set; } = "";
         public string Email { get; set; } = "";
         public string Phone { get; set; } = "";
-        public IFormFile ManifestoFile { get; set; }
-        public IFormFile PhotoFile { get; set; }
+        public IFormFile? ManifestoFile { get; set; }
+        public IFormFile? PhotoFile { get; set; }
     }
 
     public class UpdateCandidateRequest

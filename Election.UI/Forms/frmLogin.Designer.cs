@@ -1,6 +1,7 @@
-﻿namespace Election.UI.Forms
+﻿
+namespace Election.UI.Forms
 {
-    partial class frmLogin
+    partial class FrmLogin
     {
         /// <summary>
         /// Required designer variable.
@@ -70,7 +71,7 @@
             lblPassword.Size = new Size(76, 21);
             lblPassword.TabIndex = 8;
             lblPassword.Text = "Password";
-            lblPassword.Click += lblPassword_Click;
+            lblPassword.Click += LblPassword_Click;
             // 
             // lblUsername
             // 
@@ -151,7 +152,7 @@
             txtUsername.Name = "txtUsername";
             txtUsername.Size = new Size(333, 36);
             txtUsername.TabIndex = 1;
-            txtUsername.TextChanged += txtUsername_TextChanged;
+            txtUsername.TextChanged += TxtUsername_TextChanged;
             // 
             // label1
             // 
@@ -163,7 +164,7 @@
             label1.Size = new Size(141, 42);
             label1.TabIndex = 0;
             label1.Text = "LOGIN";
-            label1.Click += label1_Click;
+            label1.Click += Label1_Click;
             // 
             // frmLogin
             // 
@@ -173,7 +174,7 @@
             BackgroundImageLayout = ImageLayout.Stretch;
             ClientSize = new Size(939, 602);
             Controls.Add(pnllogin);
-            Name = "frmLogin";
+            Name = "FrmLogin";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Login - Election Management System";
             pnllogin.ResumeLayout(false);

@@ -7,19 +7,19 @@
     <Compile Update="Forms\frmAdminDashboard.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="Forms\frmCandidateApplication.cs">
+    <Compile Update="Forms\FrmCandidateApplication.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\frmCandidateProfile.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="Forms\frmLogin.cs">
+    <Compile Update="Forms\FrmLogin.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\frmRegister.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="Forms\frmVoterDashboard.cs">
+    <Compile Update="Forms\FrmVoterDashboard.cs">
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>

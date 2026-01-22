@@ -1,6 +1,9 @@
-﻿namespace Election.UI.Forms
+﻿using System.Drawing;
+using System.Windows.Forms;
+
+namespace Election.UI.Forms
 {
-    partial class frmVoterDashboard
+    partial class FrmVoterDashboard
     {
         /// <summary>
         /// Required designer variable.
@@ -33,8 +36,8 @@
             lblSystemTitle = new Label();
             picLogo = new PictureBox();
             panel2 = new Panel();
-            label1 = new Label();
             btnSubmit = new Button();
+            label1 = new Label();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)picLogo).BeginInit();
             panel2.SuspendLayout();
@@ -99,18 +102,7 @@
             panel2.Name = "panel2";
             panel2.Size = new Size(1142, 566);
             panel2.TabIndex = 1;
-            //panel2.Paint += panel2_Paint;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label1.ForeColor = Color.White;
-            label1.Location = new Point(54, 13);
-            label1.Name = "label1";
-            label1.Size = new Size(206, 25);
-            label1.TabIndex = 0;
-            label1.Text = "Select Your Candidate";
+            panel2.Paint += panel2_Paint;
             // 
             // btnSubmit
             // 
@@ -125,7 +117,18 @@
             btnSubmit.Text = "Submit";
             btnSubmit.UseVisualStyleBackColor = false;
             // 
-            // frmVoterDashboard
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label1.ForeColor = Color.White;
+            label1.Location = new Point(54, 13);
+            label1.Name = "label1";
+            label1.Size = new Size(206, 25);
+            label1.TabIndex = 0;
+            label1.Text = "Select Your Candidate";
+            // 
+            // FrmVoterDashboard
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -134,8 +137,8 @@
             ClientSize = new Size(1302, 706);
             Controls.Add(panel2);
             Controls.Add(panel1);
-            Name = "frmVoterDashboard";
-            Text = "frmVoterDashboard";
+            Name = "FrmVoterDashboard";
+            Text = "Voter Dashboard - Election Management System";
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();
@@ -146,6 +149,12 @@
 
         #endregion
 
-     
+        private Panel panel1;
+        private PictureBox picLogo;
+        private Label lblSystemTitle;
+        private Button btnLogout;
+        private Panel panel2;
+        private Label label1;
+        private Button btnSubmit;
     }
 }

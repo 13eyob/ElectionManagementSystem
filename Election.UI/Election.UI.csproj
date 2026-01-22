@@ -36,4 +36,7 @@
 		</EmbeddedResource>
 	</ItemGroup>
 
+	<Target Name="KillProcess" BeforeTargets="PrepareForBuild">
+		<Exec Command="taskkill /F /IM Election.UI.exe /T 2&gt;nul || exit 0" />
+	</Target>
 </Project>

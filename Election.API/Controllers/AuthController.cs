@@ -23,12 +23,27 @@ namespace Election.API.Controllers
             if (user == null)
                 return BadRequest("Invalid username or password");
 
+            // ✅ SECURITY: Block login if user has already voted (Requirement #4)
+            if (user.Role == "Voter" && user.HasVoted)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "🔒 This account has already completed voting and cannot login again.",
+                    errorCode = "ACCOUNT_LOCKED_AFTER_VOTING"
+                });
+            }
+
             return Ok(new
             {
+                success = true,
+                userId = user.Id,  // ✅ Added for vote tracking
                 fullName = user.FullName,
                 role = user.Role,
                 isApproved = user.IsApproved,
-                email = user.Email  // ADD THIS LINE
+                email = user.Email,
+                region = user.Region,  // ✅ Added for auto-fill in candidate application
+                hasVoted = user.HasVoted  // ✅ Added for voting status tracking
             });
         }
 

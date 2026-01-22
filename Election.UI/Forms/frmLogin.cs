@@ -1,52 +1,50 @@
 ﻿using System;
-using System.Drawing;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;  // ✅ Added
 using System.Windows.Forms;
 using Election.UI;
 
 namespace Election.UI.Forms
 {
-    public partial class frmLogin : Form
+    public partial class FrmLogin : Form
     {
         private readonly HttpClient _client = new HttpClient();
 
-        // LoginResponse class for API response
-        public class LoginResponse
-        {
-            public string fullName { get; set; } = "";
-            public string role { get; set; } = "";
-            public bool isApproved { get; set; }
-            public string email { get; set; } = "";
-            public string message { get; set; } = "";
-            public bool success { get; set; }
-        }
+        // ✅ FIXED: Proper JSON property mapping
+        public record LoginResponse(
+            [property: JsonPropertyName("success")] bool Success = false,
+            [property: JsonPropertyName("userId")] int UserId = 0,
+            [property: JsonPropertyName("fullName")] string FullName = "",
+            [property: JsonPropertyName("role")] string Role = "",
+            [property: JsonPropertyName("isApproved")] bool IsApproved = false,
+            [property: JsonPropertyName("email")] string Email = "",      // ✅ Maps "email" from API
+            [property: JsonPropertyName("region")] string Region = "",    // ✅ Maps "region" from API
+            [property: JsonPropertyName("hasVoted")] bool HasVoted = false,
+            [property: JsonPropertyName("message")] string Message = "",
+            [property: JsonPropertyName("errorCode")] string ErrorCode = ""
+        );
 
-        public frmLogin()
+        public FrmLogin()
         {
             InitializeComponent();
             _client.BaseAddress = new Uri("https://localhost:7208");
             _client.Timeout = TimeSpan.FromSeconds(30);
 
-            // Center the panel when form loads
-            this.Load += frmLogin_Load;
+            // Center panel events
+            this.Load += FrmLogin_Load;
             this.Resize += (s, e) => CenterLoginPanel();
 
-            // Handle Enter key press for login
+            // Keyboard support
             this.KeyPreview = true;
             this.KeyDown += FrmLogin_KeyDown;
 
-            // Connect button and link events
-            button1.Click += button1_Click;
-            linkRegister.LinkClicked += linkRegister_LinkClicked;
-
-            // NO placeholder event handlers needed
+            // Button and link events
+            button1.Click += Button1_Click;
+            linkRegister.LinkClicked += LinkRegister_LinkClicked;
         }
 
-        /// <summary>
-        /// Centers the login panel both horizontally and vertically
-        /// </summary>
         private void CenterLoginPanel()
         {
             if (pnllogin != null && this.ClientSize.Width > 0 && this.ClientSize.Height > 0)
@@ -56,9 +54,6 @@ namespace Election.UI.Forms
             }
         }
 
-        /// <summary>
-        /// Handle Enter key press for login
-        /// </summary>
         private void FrmLogin_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
@@ -69,111 +64,133 @@ namespace Election.UI.Forms
             }
         }
 
-        /// <summary>
-        /// Form Load: Set empty fields and focus
-        /// </summary>
-        private void frmLogin_Load(object sender, EventArgs e)
+        private void FrmLogin_Load(object sender, EventArgs e)
         {
-            // Start with empty fields (NO PLACEHOLDERS)
             txtUsername.Text = "";
             txtPassword.Text = "";
-
-            // Set focus to username field
             txtUsername.Focus();
-
-            // Center panel
             CenterLoginPanel();
         }
 
-        /// <summary>
-        /// Login button click - authenticate user
-        /// </summary>
-        private async void button1_Click(object sender, EventArgs e)
+        private async void Button1_Click(object sender, EventArgs e)
         {
             try
             {
-                // Get username and password directly
                 string username = txtUsername.Text.Trim();
                 string password = txtPassword.Text.Trim();
 
-                // Basic validation
+                // Validation
                 if (string.IsNullOrWhiteSpace(username))
                 {
-                    MessageBox.Show("Please enter your username", "Validation Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Please enter your username",
+                                   "Validation Error",
+                                   MessageBoxButtons.OK,
+                                   MessageBoxIcon.Warning);
                     txtUsername.Focus();
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(password))
                 {
-                    MessageBox.Show("Please enter your password", "Validation Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Please enter your password",
+                                   "Validation Error",
+                                   MessageBoxButtons.OK,
+                                   MessageBoxIcon.Warning);
                     txtPassword.Focus();
                     return;
                 }
 
+                // UI state update
                 Cursor = Cursors.WaitCursor;
                 button1.Enabled = false;
                 button1.Text = "Logging in...";
 
+                // Prepare login data
                 var loginData = new { Username = username, Password = password };
                 var response = await _client.PostAsJsonAsync("api/auth/login", loginData);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true  // ✅ This helps too
+                    };
                     var result = await response.Content.ReadFromJsonAsync<LoginResponse>(options);
 
                     if (result != null)
                     {
-                        // Store user session data (only using existing properties)
+                        // ✅ DEBUG: Show what we received
+                        Console.WriteLine($"DEBUG Login Response:");
+                        Console.WriteLine($"- Email: {result.Email}");
+                        Console.WriteLine($"- Region: {result.Region}");
+                        Console.WriteLine($"- FullName: {result.FullName}");
+                        Console.WriteLine($"- Role: {result.Role}");
+
+                        // Store user session with all new fields
+                        UserSession.UserId = result.UserId;
                         UserSession.Username = username;
-                        UserSession.Email = result.email ?? "";
-                        UserSession.Role = result.role ?? "";
 
-                        // IsLoggedIn will automatically be true because Username is set
+                        // ✅ CRITICAL FIX: These will now get the correct values
+                        UserSession.Email = result.Email ?? "";
+                        UserSession.Region = result.Region ?? "";
+                        UserSession.Role = result.Role ?? "";
+                        UserSession.Token = "dummy_token";
 
-                        string role = result.role ?? "Unknown";
-                        string fullName = result.fullName ?? username;
+                        string role = !string.IsNullOrEmpty(result.Role) ? result.Role : "Unknown";
+                        string fullName = !string.IsNullOrEmpty(result.FullName) ? result.FullName : username;
 
-                        if (result.success || !string.IsNullOrEmpty(result.role))
+                        if (result.Success || !string.IsNullOrEmpty(result.Role))
                         {
-                            MessageBox.Show($"Welcome {fullName}!\nRole: {role}", "Login Successful",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show($"Welcome {fullName}!\nRole: {role}\nEmail: {UserSession.Email}\nRegion: {UserSession.Region}",
+                                           "Login Successful",
+                                           MessageBoxButtons.OK,
+                                           MessageBoxIcon.Information);
+
                             this.Hide();
 
-                            // Navigate based on role
+                            // Navigate based on role - ACTUALLY OPEN THE FORMS
                             if (role.Equals("Candidate", StringComparison.OrdinalIgnoreCase))
                             {
-                                new frmCandidateApplication().Show();
+                                // ✅ Now email and region are properly stored in UserSession
+                                var candidateForm = new FrmCandidateApplication(fullName);
+                                candidateForm.Show();
                             }
                             else if (role.Equals("Voter", StringComparison.OrdinalIgnoreCase))
                             {
-                                new frmVoterDashboard(1, username).Show();
+                                // ✅ Open Voter Dashboard with actual userId from login response
+                                var voterForm = new FrmVoterDashboard(result.UserId, UserSession.Email ?? username);
+                                voterForm.Show();
                             }
                             else if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
                             {
-                                new frmAdminDashboard().Show();
+                                // Open Admin Dashboard Form
+                                var adminForm = new FrmAdminDashboard();
+                                adminForm.Show();
                             }
                             else
                             {
                                 MessageBox.Show($"Unknown role: {role}\nPlease contact administrator.",
-                                    "Role Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                               "Role Error",
+                                               MessageBoxButtons.OK,
+                                               MessageBoxIcon.Error);
                                 this.Show();
                             }
                         }
                         else
                         {
-                            MessageBox.Show(result.message ?? "Login failed. Please check your credentials.",
-                                "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show(!string.IsNullOrEmpty(result.Message) ? result.Message : "Login failed. Please check your credentials.",
+                                           "Login Failed",
+                                           MessageBoxButtons.OK,
+                                           MessageBoxIcon.Error);
                             this.Show();
                         }
                     }
                     else
                     {
-                        MessageBox.Show("Invalid response from server", "Error",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Invalid response from server",
+                                       "Error",
+                                       MessageBoxButtons.OK,
+                                       MessageBoxIcon.Error);
                         this.Show();
                     }
                 }
@@ -192,54 +209,53 @@ namespace Election.UI.Forms
                     }
                     catch { }
 
-                    MessageBox.Show($"{errorMessage}\n\nStatus: {response.StatusCode}", "Login Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"{errorMessage}\n\nStatus: {response.StatusCode}",
+                                   "Login Error",
+                                   MessageBoxButtons.OK,
+                                   MessageBoxIcon.Error);
                     this.Show();
                 }
             }
             catch (HttpRequestException ex)
             {
-                MessageBox.Show($"Cannot connect to server!\n\nError: {ex.Message}\n\nPlease check:\n1. Server is running\n2. Internet connection\n3. API endpoint is correct",
-                    "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Cannot connect to server!\n\nError: {ex.Message}",
+                               "Connection Error",
+                               MessageBoxButtons.OK,
+                               MessageBoxIcon.Error);
                 this.Show();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"An error occurred: {ex.Message}",
+                               "Error",
+                               MessageBoxButtons.OK,
+                               MessageBoxIcon.Error);
                 this.Show();
             }
             finally
             {
+                // Reset UI state
                 Cursor = Cursors.Default;
                 button1.Enabled = true;
                 button1.Text = "Login";
             }
         }
 
-        /// <summary>
-        /// Register link click - open registration form
-        /// </summary>
-        private void linkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        private void LinkRegister_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             this.Hide();
-            new frmRegister().Show();
+            var registerForm = new frmRegister();
+            registerForm.Show();
         }
 
-        // Empty event handlers (required by Designer)
-        private void txtUsername_TextChanged(object sender, EventArgs e)
-        {
-            // No implementation needed
-        }
+        // Event handlers for designer-generated events
+        private void TxtUsername_TextChanged(object sender, EventArgs e) { }
+        private void LblPassword_Click(object sender, EventArgs e) { }
+        private void Label1_Click(object sender, EventArgs e) { }
 
-        private void lblPassword_Click(object sender, EventArgs e)
+        private void FrmLogin_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // No implementation needed
-        }
-
-        private void label1_Click(object sender, EventArgs e)
-        {
-            // No implementation needed
+            _client?.Dispose();
         }
     }
 }
